@@ -70,17 +70,9 @@ return new ICadGenerator() {
 
 	@Override 
 	public ArrayList<CSG> generateBody(MobileBase b ) {
-		ArrayList<CSG> allCad=new ArrayList<>();
-		double size = 40;
-
-		File servoFile = ScriptingEngine.fileFromGit(
-			"https://github.com/NeuronRobotics/NASACurisoity.git",
-			"STL/body.STL");
-
-		// Load the .CSG from the disk and cache it in memory
-		CSG body  = Vitamins.get(servoFile)
-
+		CSG body  = new Cube(30).toCSG()
+		body.setColor(javafx.scene.paint.Color.WHITE)
 		body.setManipulator(b.getRootListener());
-
 		return [body];
-}}
+	}
+}
