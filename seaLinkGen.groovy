@@ -1,5 +1,6 @@
 import com.neuronrobotics.bowlerstudio.creature.ICadGenerator;
 import com.neuronrobotics.bowlerstudio.creature.CreatureLab
+import com.neuronrobotics.bowlerstudio.physics.TransformFactory
 import com.neuronrobotics.sdk.addons.kinematics.DHParameterKinematics
 import com.neuronrobotics.sdk.addons.kinematics.MobileBase
 import eu.mihosoft.vrl.v3d.CSG;
@@ -9,6 +10,9 @@ import java.nio.file.Paths;
 import eu.mihosoft.vrl.v3d.FileUtil;
 import com.neuronrobotics.bowlerstudio.vitamins.*;
 import javafx.scene.transform.Affine;
+import com.neuronrobotics.sdk.addons.kinematics.LinkConfiguration
+import com.neuronrobotics.sdk.addons.kinematics.DHLink
+import com.neuronrobotics.sdk.addons.kinematics.math.TransformNR
 
 CSG reverseDHValues(CSG incoming, DHLink dh){
 	println "Reversing "+dh
@@ -21,7 +25,7 @@ CSG moveDHValues(CSG incoming, DHLink dh){
 	TransformNR step = new TransformNR(dh.DhStep(0)).inverse()
 	Transform move = com.neuronrobotics.bowlerstudio.physics.TransformFactory.nrToCSG(step)
 	return incoming.transformed(move)
-	
+
 }
 
 class MyCadGen implements ICadGenerator {
@@ -36,9 +40,11 @@ class MyCadGen implements ICadGenerator {
 
     @Override
     ArrayList<CSG> generateCad(DHParameterKinematics dhParameterKinematics, int i) {
+        def vitaminLocations = new HashMap<TransformNR, ArrayList<String>>()
+
         ArrayList<DHLink> dhLinks = d.getChain().getLinks()
         ArrayList<CSG> allCad=new ArrayList<CSG>()
-        int i=linkIndex;
+//        int i=linkIndex;
         DHLink dh = dhLinks.get(linkIndex)
         // Hardware to engineering units configuration
         LinkConfiguration conf = d.getLinkConfiguration(i);
@@ -47,13 +53,31 @@ class MyCadGen implements ICadGenerator {
         // Transform used by the UI to render the location of the object
         Affine manipulator = dh.getListener();
         // loading the vitamins referenced in the configuration
-        CSG servo = Vitamins.get(conf.getElectroMechanicalType(),conf.getElectroMechanicalSize())
+//        CSG servo = Vitamins.get(conf.getElectroMechanicalType(),conf.getElectroMechanicalSize())
+        TransformNR locationOfMotorMount = new TransformNR(dh.DhStep(0)).inverse()
+        vitaminLocations.put(
+                locationOfMotorMount,
+                [conf.getElectroMechanicalType(), conf.getElectroMechanicalSize()] as ArrayList<String>
+        )
 
-        CSG tmpSrv = moveDHValues(servo,dh)
 
-        //Compute the location of the base of this limb to place objects at the root of the limb
-        TransformNR step = d.getRobotToFiducialTransform()
-        Transform locationOfBaseOfLimb = com.neuronrobotics.bowlerstudio.physics.TransformFactory.nrToCSG(step)
+
+//        CSG tmpSrv = moveDHValues(servo,dh)
+//
+//        //Compute the location of the base of this limb to place objects at the root of the limb
+//        TransformNR step = d.getRobotToFiducialTransform()
+//        Transform locationOfBaseOfLimb = TransformFactory.nrToCSG(step)
+
+
+
+        for (TransformNR tr : vitaminLocations.keySet()) {
+            def vitaminType = vitaminLocations.get(tr)[0]
+            def vitaminSize = vitaminLocations.get(tr)[1]
+            def vitaminData = Vitamins.getConfiguration(vitaminType, vitaminSize)
+            def motor = Vitamins.get(vitaminType, vitaminSize)
+            def comCentroid = new TransformNR()
+        }
+
 
         tmpSrv.setManipulator(manipulator)
         allCad.add(tmpSrv)
