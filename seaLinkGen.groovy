@@ -3,6 +3,7 @@ import com.neuronrobotics.bowlerstudio.creature.CreatureLab
 import com.neuronrobotics.bowlerstudio.physics.TransformFactory
 import com.neuronrobotics.sdk.addons.kinematics.DHParameterKinematics
 import com.neuronrobotics.sdk.addons.kinematics.MobileBase
+import com.neuronrobotics.sdk.addons.kinematics.math.RotationNR
 import eu.mihosoft.vrl.v3d.CSG;
 import org.apache.commons.io.IOUtils;
 import com.neuronrobotics.bowlerstudio.vitamins.*;
@@ -39,21 +40,24 @@ class MyCadGen implements ICadGenerator {
     }
 
     @Override
-    ArrayList<CSG> generateCad(DHParameterKinematics dhParameterKinematics, int i) {
+    ArrayList<CSG> generateCad(DHParameterKinematics d, int linkIndex) {
+        println("Generating CAD for " + d + " linkIndex=" + linkIndex)
         def vitaminLocations = new HashMap<TransformNR, ArrayList<String>>()
 
         ArrayList<DHLink> dhLinks = d.getChain().getLinks()
         ArrayList<CSG> allCad=new ArrayList<CSG>()
-//        int i=linkIndex;
+        int i=linkIndex;
         DHLink dh = dhLinks.get(linkIndex)
         // Hardware to engineering units configuration
         LinkConfiguration conf = d.getLinkConfiguration(i);
         // Engineering units to kinematics link (limits and hardware type abstraction)
-        AbstractLink abstractLink = d.getAbstractLink(i);
+        AbstractLink abstractLink = d.getAbstractLink(i) as AbstractLink;
         // Transform used by the UI to render the location of the object
         Affine manipulator = dh.getListener();
         // loading the vitamins referenced in the configuration
 //        CSG servo = Vitamins.get(conf.getElectroMechanicalType(),conf.getElectroMechanicalSize())
+
+
         TransformNR locationOfMotorMount = new TransformNR(dh.DhStep(0)).inverse()
         vitaminLocations.put(
                 locationOfMotorMount,
@@ -69,14 +73,41 @@ class MyCadGen implements ICadGenerator {
 //        Transform locationOfBaseOfLimb = TransformFactory.nrToCSG(step)
 
 
+        double totalMassKg = 0.0
+        TransformNR centerOfMassFromCentroid = new TransformNR()
+        def intermediateCoMs = new ArrayList<TransformNR>()
 
-        for (TransformNR tr : vitaminLocations.keySet()) {
-            def vitaminType = vitaminLocations.get(tr)[0]
-            def vitaminSize = vitaminLocations.get(tr)[1]
+        for (TransformNR vitaminLocation : vitaminLocations.keySet()) {
+            def vitaminType = vitaminLocations.get(vitaminLocation)[0]
+            def vitaminSize = vitaminLocations.get(vitaminLocation)[1]
             def vitaminData = Vitamins.getConfiguration(vitaminType, vitaminSize)
-            def motor = Vitamins.get(vitaminType, vitaminSize)
-            def comCentroid = new TransformNR()
+            def vitaminCad = Vitamins.get(vitaminType, vitaminSize)
+            def massKg = vitaminData["massKg"] as double
+            def comCentroid = vitaminLocation.times(
+                    new TransformNR(
+                            vitaminData["massCentroidX"] as double,
+                            vitaminData["massCentroidY"] as double,
+                            vitaminData["massCentroidZ"] as double,
+                            new RotationNR()
+                    )
+            )
+
+            allCad.add(vitaminCad.transformed(TransformFactory.nrToCSG(vitaminLocation)))
+            totalMassKg += massKg
+            intermediateCoMs.add(comCentroid)
+            centerOfMassFromCentroid.x = (centerOfMassFromCentroid.x + comCentroid.x) * massKg
+            centerOfMassFromCentroid.y = (centerOfMassFromCentroid.y + comCentroid.y) * massKg
+            centerOfMassFromCentroid.z = (centerOfMassFromCentroid.z + comCentroid.z) * massKg
         }
+
+        centerOfMassFromCentroid.x = centerOfMassFromCentroid.x / totalMassKg
+        centerOfMassFromCentroid.y = centerOfMassFromCentroid.y / totalMassKg
+        centerOfMassFromCentroid.z = centerOfMassFromCentroid.z / totalMassKg
+
+        conf.setMassKg(totalMassKg)
+        conf.setCenterOfMassFromCentroid(centerOfMassFromCentroid)
+        println("Computed totalMassKg=" + totalMassKg)
+        println("Computed centerOfMassFromCentroid=" + centerOfMassFromCentroid)
 
 
         tmpSrv.setManipulator(manipulator)
