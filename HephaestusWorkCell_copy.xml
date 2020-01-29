@@ -213,7 +213,7 @@
 		<file>seaLinkGen.groovy</file>
 	</cadEngine>
 	<kinematics>
-		<git>https://github.com/madhephaestus/carl-the-hexapod.git</git>
+		<git>https://github.com/Octogonapus/HephaestusWorkCell_copy.git</git>
 		<file>DefaultDhSolver.groovy</file>
 	</kinematics>
 <link>
@@ -408,7 +408,7 @@
 		<file>seaLinkGen.groovy</file>
 	</cadEngine>
 	<kinematics>
-		<git>https://github.com/madhephaestus/carl-the-hexapod.git</git>
+		<git>https://github.com/Octogonapus/HephaestusWorkCell_copy.git</git>
 		<file>DefaultDhSolver.groovy</file>
 	</kinematics>
 <link>
