@@ -51,14 +51,14 @@
 
 	</vitamins>
 	<passive>false</passive>
-	<mass>0.01</mass>
+	<mass>0.0955</mass>
 	<centerOfMassFromCentroid>	<x>0.0</x>
-	<y>0.0</y>
-	<z>0.0</z>
+	<y>0.13358638743455498</y>
+	<z>-2.9662136621267926E-17</z>
 	<rotw>1.0</rotw>
-	<rotx>0.0</rotx>
-	<roty>0.0</roty>
-	<rotz>0.0</rotz></centerOfMassFromCentroid>
+	<rotx>-0.0</rotx>
+	<roty>-0.0</roty>
+	<rotz>-0.0</rotz></centerOfMassFromCentroid>
 	<imuFromCentroid>	<x>0.0</x>
 	<y>0.0</y>
 	<z>0.0</z>
@@ -94,25 +94,25 @@
 	<vitamins>
 		<vitamin>
 			<name>electroMechanical</name>
-			<type>hobbyServo</type>
-			<id>hv5932mg</id>
+			<type>vexMotor</type>
+			<id>393</id>
 		</vitamin>
 		<vitamin>
 			<name>shaft</name>
-			<type>hobbyServoHorn</type>
-			<id>hv6214mg_6</id>
+			<type>vexShaft</type>
+			<id>2-inch</id>
 		</vitamin>
 
 	</vitamins>
 	<passive>false</passive>
-	<mass>0.01</mass>
-	<centerOfMassFromCentroid>	<x>0.0</x>
+	<mass>0.20400000000000001</mass>
+	<centerOfMassFromCentroid>	<x>-0.17414215686274512</x>
 	<y>0.0</y>
-	<z>0.0</z>
+	<z>-49.75490196078431</z>
 	<rotw>1.0</rotw>
-	<rotx>0.0</rotx>
-	<roty>0.0</roty>
-	<rotz>0.0</rotz></centerOfMassFromCentroid>
+	<rotx>-0.0</rotx>
+	<roty>-0.0</roty>
+	<rotz>-0.0</rotz></centerOfMassFromCentroid>
 	<imuFromCentroid>	<x>0.0</x>
 	<y>0.0</y>
 	<z>0.0</z>
@@ -148,25 +148,25 @@
 	<vitamins>
 		<vitamin>
 			<name>electroMechanical</name>
-			<type>hobbyServo</type>
-			<id>hv5932mg</id>
+			<type>roundMotor</type>
+			<id>WPI-gb37y3530-50en</id>
 		</vitamin>
 		<vitamin>
 			<name>shaft</name>
-			<type>hobbyServoHorn</type>
-			<id>hv6214mg_6</id>
+			<type>dShaft</type>
+			<id>WPI-gb37y3530-50en</id>
 		</vitamin>
 
 	</vitamins>
 	<passive>false</passive>
-	<mass>0.01</mass>
-	<centerOfMassFromCentroid>	<x>0.0</x>
-	<y>0.0</y>
+	<mass>0.001</mass>
+	<centerOfMassFromCentroid>	<x>-169.28</x>
+	<y>-2.7222300213726103E-14</y>
 	<z>0.0</z>
 	<rotw>1.0</rotw>
-	<rotx>0.0</rotx>
-	<roty>0.0</roty>
-	<rotz>0.0</rotz></centerOfMassFromCentroid>
+	<rotx>-0.0</rotx>
+	<roty>-0.0</roty>
+	<rotz>-0.0</rotz></centerOfMassFromCentroid>
 	<imuFromCentroid>	<x>0.0</x>
 	<y>0.0</y>
 	<z>0.0</z>
@@ -246,14 +246,14 @@
 
 	</vitamins>
 	<passive>false</passive>
-	<mass>0.01</mass>
-	<centerOfMassFromCentroid>	<x>0.0</x>
+	<mass>0.121</mass>
+	<centerOfMassFromCentroid>	<x>-0.49586776859504134</x>
 	<y>0.0</y>
 	<z>0.0</z>
 	<rotw>1.0</rotw>
-	<rotx>0.0</rotx>
-	<roty>0.0</roty>
-	<rotz>0.0</rotz></centerOfMassFromCentroid>
+	<rotx>-0.0</rotx>
+	<roty>-0.0</roty>
+	<rotz>-0.0</rotz></centerOfMassFromCentroid>
 	<imuFromCentroid>	<x>0.0</x>
 	<y>0.0</y>
 	<z>0.0</z>
@@ -300,14 +300,14 @@
 
 	</vitamins>
 	<passive>false</passive>
-	<mass>0.01</mass>
-	<centerOfMassFromCentroid>	<x>0.0</x>
-	<y>0.0</y>
+	<mass>0.121</mass>
+	<centerOfMassFromCentroid>	<x>-0.09223140495867768</x>
+	<y>1.4831941132554765E-17</y>
 	<z>0.0</z>
 	<rotw>1.0</rotw>
-	<rotx>0.0</rotx>
-	<roty>0.0</roty>
-	<rotz>0.0</rotz></centerOfMassFromCentroid>
+	<rotx>-0.0</rotx>
+	<roty>-0.0</roty>
+	<rotz>-0.0</rotz></centerOfMassFromCentroid>
 	<imuFromCentroid>	<x>0.0</x>
 	<y>0.0</y>
 	<z>0.0</z>
@@ -354,14 +354,14 @@
 
 	</vitamins>
 	<passive>false</passive>
-	<mass>0.01</mass>
-	<centerOfMassFromCentroid>	<x>0.0</x>
-	<y>0.0</y>
+	<mass>0.001</mass>
+	<centerOfMassFromCentroid>	<x>-131.0</x>
+	<y>-2.1066406710763937E-14</y>
 	<z>0.0</z>
 	<rotw>1.0</rotw>
-	<rotx>0.0</rotx>
-	<roty>0.0</roty>
-	<rotz>0.0</rotz></centerOfMassFromCentroid>
+	<rotx>-0.0</rotx>
+	<roty>-0.0</roty>
+	<rotz>-0.0</rotz></centerOfMassFromCentroid>
 	<imuFromCentroid>	<x>0.0</x>
 	<y>0.0</y>
 	<z>0.0</z>
@@ -441,14 +441,14 @@
 
 	</vitamins>
 	<passive>false</passive>
-	<mass>0.01</mass>
-	<centerOfMassFromCentroid>	<x>0.0</x>
+	<mass>0.20400000000000001</mass>
+	<centerOfMassFromCentroid>	<x>-0.2941176470588235</x>
 	<y>0.0</y>
-	<z>0.0</z>
+	<z>-0.04975490196078432</z>
 	<rotw>1.0</rotw>
-	<rotx>0.0</rotx>
-	<roty>0.0</roty>
-	<rotz>0.0</rotz></centerOfMassFromCentroid>
+	<rotx>-0.0</rotx>
+	<roty>-0.0</roty>
+	<rotz>-0.0</rotz></centerOfMassFromCentroid>
 	<imuFromCentroid>	<x>0.0</x>
 	<y>0.0</y>
 	<z>0.0</z>
@@ -495,14 +495,14 @@
 
 	</vitamins>
 	<passive>false</passive>
-	<mass>0.01</mass>
-	<centerOfMassFromCentroid>	<x>0.0</x>
-	<y>0.0</y>
-	<z>0.0</z>
+	<mass>0.20400000000000001</mass>
+	<centerOfMassFromCentroid>	<x>-0.09254411764705882</x>
+	<y>1.4882229168257463E-17</y>
+	<z>-49.75490196078431</z>
 	<rotw>1.0</rotw>
-	<rotx>0.0</rotx>
-	<roty>0.0</roty>
-	<rotz>0.0</rotz></centerOfMassFromCentroid>
+	<rotx>-0.0</rotx>
+	<roty>-0.0</roty>
+	<rotz>-0.0</rotz></centerOfMassFromCentroid>
 	<imuFromCentroid>	<x>0.0</x>
 	<y>0.0</y>
 	<z>0.0</z>
@@ -549,14 +549,14 @@
 
 	</vitamins>
 	<passive>false</passive>
-	<mass>0.01</mass>
-	<centerOfMassFromCentroid>	<x>0.0</x>
-	<y>0.0</y>
+	<mass>0.001</mass>
+	<centerOfMassFromCentroid>	<x>-131.0</x>
+	<y>-2.1066406710763937E-14</y>
 	<z>0.0</z>
 	<rotw>1.0</rotw>
-	<rotx>0.0</rotx>
-	<roty>0.0</roty>
-	<rotz>0.0</rotz></centerOfMassFromCentroid>
+	<rotx>-0.0</rotx>
+	<roty>-0.0</roty>
+	<rotz>-0.0</rotz></centerOfMassFromCentroid>
 	<imuFromCentroid>	<x>0.0</x>
 	<y>0.0</y>
 	<z>0.0</z>
