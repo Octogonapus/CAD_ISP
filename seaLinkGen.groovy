@@ -15,17 +15,17 @@ import com.neuronrobotics.sdk.addons.kinematics.LinkConfiguration
 import com.neuronrobotics.sdk.addons.kinematics.DHLink
 import com.neuronrobotics.sdk.addons.kinematics.math.TransformNR
 
-CSG reverseDHValues(CSG incoming, DHLink dh){
-	println "Reversing "+dh
-	TransformNR step = new TransformNR(dh.DhStep(0))
-	Transform move = com.neuronrobotics.bowlerstudio.physics.TransformFactory.nrToCSG(step)
-	return incoming.transformed(move)
+CSG reverseDHValues(CSG incoming, DHLink dh) {
+    println "Reversing " + dh
+    TransformNR step = new TransformNR(dh.DhStep(0))
+    Transform move = com.neuronrobotics.bowlerstudio.physics.TransformFactory.nrToCSG(step)
+    return incoming.transformed(move)
 }
 
-CSG moveDHValues(CSG incoming, DHLink dh){
-	TransformNR step = new TransformNR(dh.DhStep(0)).inverse()
-	Transform move = com.neuronrobotics.bowlerstudio.physics.TransformFactory.nrToCSG(step)
-	return incoming.transformed(move)
+CSG moveDHValues(CSG incoming, DHLink dh) {
+    TransformNR step = new TransformNR(dh.DhStep(0)).inverse()
+    Transform move = com.neuronrobotics.bowlerstudio.physics.TransformFactory.nrToCSG(step)
+    return incoming.transformed(move)
 
 }
 
@@ -33,9 +33,9 @@ class MyCadGen implements ICadGenerator {
 
     @Override
     ArrayList<CSG> generateBody(MobileBase mobileBase) {
-        CSG body  = new Cube(30).toCSG()
+        CSG body = new Cube(30).toCSG()
         body.setColor(javafx.scene.paint.Color.WHITE)
-        body.setManipulator(b.getRootListener());
+        body.setManipulator(mobileBase.getRootListener());
         return [body];
     }
 
@@ -45,8 +45,8 @@ class MyCadGen implements ICadGenerator {
         def vitaminLocations = new HashMap<TransformNR, ArrayList<String>>()
 
         ArrayList<DHLink> dhLinks = d.getChain().getLinks()
-        ArrayList<CSG> allCad=new ArrayList<CSG>()
-        int i=linkIndex;
+        ArrayList<CSG> allCad = new ArrayList<CSG>()
+        int i = linkIndex;
         DHLink dh = dhLinks.get(linkIndex)
         // Hardware to engineering units configuration
         LinkConfiguration conf = d.getLinkConfiguration(i);
@@ -54,24 +54,22 @@ class MyCadGen implements ICadGenerator {
         AbstractLink abstractLink = d.getAbstractLink(i) as AbstractLink;
         // Transform used by the UI to render the location of the object
         Affine manipulator = dh.getListener();
-        // loading the vitamins referenced in the configuration
-//        CSG servo = Vitamins.get(conf.getElectroMechanicalType(),conf.getElectroMechanicalSize())
-
 
         TransformNR locationOfMotorMount = new TransformNR(dh.DhStep(0)).inverse()
         vitaminLocations.put(
                 locationOfMotorMount,
-                [conf.getElectroMechanicalType(), conf.getElectroMechanicalSize()] as ArrayList<String>
+                [conf.getShaftType(), conf.getShaftSize()] as ArrayList<String>
         )
 
-
-
-//        CSG tmpSrv = moveDHValues(servo,dh)
-//
-//        //Compute the location of the base of this limb to place objects at the root of the limb
-//        TransformNR step = d.getRobotToFiducialTransform()
-//        Transform locationOfBaseOfLimb = TransformFactory.nrToCSG(step)
-
+        if (linkIndex != d.getNumberOfLinks() - 1) {
+            // If this is not the last link (the last link does not get a motor)
+            // The motor for the first link is part of the base
+            LinkConfiguration confPrior = d.getLinkConfiguration(i + 1)
+            vitaminLocations.put(
+                    new TransformNR(),
+                    [confPrior.getElectroMechanicalType(), confPrior.getElectroMechanicalSize()] as ArrayList<String>
+            )
+        }
 
         double totalMassKg = 0.0
         TransformNR centerOfMassFromCentroid = new TransformNR()
@@ -82,6 +80,7 @@ class MyCadGen implements ICadGenerator {
             def vitaminSize = vitaminLocations.get(vitaminLocation)[1]
             def vitaminData = Vitamins.getConfiguration(vitaminType, vitaminSize)
             def vitaminCad = Vitamins.get(vitaminType, vitaminSize)
+            println(vitaminData)
             def massKg = vitaminData["massKg"] as double
             def comCentroid = vitaminLocation.times(
                     new TransformNR(
@@ -92,7 +91,10 @@ class MyCadGen implements ICadGenerator {
                     )
             )
 
-            allCad.add(vitaminCad.transformed(TransformFactory.nrToCSG(vitaminLocation)))
+            def cad = vitaminCad.transformed(TransformFactory.nrToCSG(vitaminLocation))
+            cad.setManipulator(manipulator)
+            allCad.add(cad)
+
             totalMassKg += massKg
             intermediateCoMs.add(comCentroid)
             centerOfMassFromCentroid.x = (centerOfMassFromCentroid.x + comCentroid.x) * massKg
