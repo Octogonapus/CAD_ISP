@@ -35,25 +35,40 @@ class MyCadGen implements ICadGenerator {
     }
 
     static CSG makeMotorBracket(CSG motorCSG, DHLink link) {
-        CSG motorMountBracket = new Cube(
+        CSG frontMotorMountBracket = new Cube(
                 motorCSG.totalX,
                 motorCSG.totalY,
                 5.0
         ).toCSG()
 
         // Line up with the mounting face
-        motorMountBracket = motorMountBracket.toZMin()
+        frontMotorMountBracket = frontMotorMountBracket.toZMin()
 
         // Line up the edges
-        motorMountBracket = motorMountBracket.movex(motorCSG.centerX)
-        motorMountBracket = motorMountBracket.movey(motorCSG.centerY)
+        frontMotorMountBracket = frontMotorMountBracket.movex(motorCSG.centerX)
+        frontMotorMountBracket = frontMotorMountBracket.movey(motorCSG.centerY)
 
         // Cut out mounting points
-        motorMountBracket = motorMountBracket.difference(motorCSG)
+        frontMotorMountBracket = frontMotorMountBracket.difference(motorCSG)
 
-        motorMountBracket.setManipulator(link.getListener())
-        motorMountBracket.setColor(Color.BURLYWOOD)
-        return motorMountBracket
+        CSG rearMotorMountBracket = new Cube(
+                motorCSG.totalX,
+                motorCSG.totalY,
+                5.0
+        ).toCSG()
+
+        // Line up with back face
+        rearMotorMountBracket = rearMotorMountBracket.toZMax()
+        rearMotorMountBracket = rearMotorMountBracket.movez(motorCSG.minZ)
+
+        // Line up the edges
+        rearMotorMountBracket = rearMotorMountBracket.movex(motorCSG.centerX)
+        rearMotorMountBracket = rearMotorMountBracket.movey(motorCSG.centerY)
+
+        def bracket = frontMotorMountBracket.union(rearMotorMountBracket)
+        bracket.setManipulator(link.getListener())
+        bracket.setColor(Color.BURLYWOOD)
+        return bracket
     }
 
     static CSG makeShaftBracket(CSG motorCSG, DHLink link) {
@@ -122,12 +137,43 @@ class MyCadGen implements ICadGenerator {
 
                 def motorBracket = makeMotorBracket(motorCad, dh)
                 def shaftBracket = makeShaftBracket(prevMotorCad, prevDh)
+
+                def motorBracketSlice = new Cube(
+                        0.1,
+                        motorBracket.totalY,
+                        motorBracket.totalZ
+                ).toCSG()
+                // Center it in the motor
+                motorBracketSlice = motorBracketSlice.move(motorBracket.center)
+                // Move it to the edge of the motor bracket
+                motorBracketSlice = motorBracketSlice.movex(motorBracket.minX)
+                // Get the slice of the bracket
+                motorBracketSlice = motorBracketSlice.intersect(motorBracket)
+
+                def shaftBracketSlice = new Cube(
+                        0.1,
+                        shaftBracket.totalY,
+                        shaftBracket.totalZ
+                ).toCSG()
+                // Center it in the motor
+                shaftBracketSlice = shaftBracketSlice.move(shaftBracket.center)
+                // Move it to the edge of the motor bracket
+                shaftBracketSlice = shaftBracketSlice.movex(shaftBracket.maxX)
+                // Get the slice of the bracket
+                shaftBracketSlice = shaftBracketSlice.intersect(shaftBracket)
+
+                shaftBracketSlice = moveDHValues(shaftBracketSlice, dh)
                 shaftBracket = moveDHValues(shaftBracket, dh)
-                def linkBracket = motorBracket.hull(shaftBracket)
+
+                def connection = motorBracketSlice.hull(shaftBracketSlice)
+                def linkBracket = CSG.unionAll([motorBracket, connection, shaftBracket])
                 linkBracket.setManipulator(dh.getListener())
                 allCad.add(linkBracket)
+//                allCad.add(connection)
 //                allCad.add(motorBracket)
 //                allCad.add(shaftBracket)
+//                allCad.add(motorBracketSlice)
+//                allCad.add(shaftBracketSlice)
             }
         }
 
