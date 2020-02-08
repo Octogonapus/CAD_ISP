@@ -71,20 +71,23 @@ class MyCadGen implements ICadGenerator {
         return bracket
     }
 
-    static CSG makeShaftBracket(CSG motorCSG, DHLink link) {
+    static CSG makeShaftBracket(CSG motorCSG, CSG shaftCSG, DHLink link) {
+        double shaftBracketX = Math.max(shaftCSG.totalX + 10.0, motorCSG.totalX)
+        double shaftBracketY = Math.max(shaftCSG.totalY + 10.0, motorCSG.totalY)
+
         CSG frontShaftMountBracket = new Cube(
-                motorCSG.totalX,
-                motorCSG.totalY,
+                shaftBracketX,
+                shaftBracketY,
                 5.0
         ).toCSG()
 
         // Line up with the end of the motor
         frontShaftMountBracket = frontShaftMountBracket.toZMin()
-        frontShaftMountBracket = frontShaftMountBracket.movez(motorCSG.maxZ)
+        frontShaftMountBracket = frontShaftMountBracket.movez(shaftCSG.maxZ)
 
         CSG rearShaftMountBracket = new Cube(
-                motorCSG.totalX,
-                motorCSG.totalY,
+                shaftBracketX,
+                shaftBracketY,
                 5.0
         ).toCSG()
 
@@ -147,7 +150,7 @@ class MyCadGen implements ICadGenerator {
                 def prevMotorCad = Vitamins.get(conf.getElectroMechanicalType(), conf.getElectroMechanicalSize())
 
                 def motorBracket = makeMotorBracket(motorCad, dh)
-                def shaftBracket = makeShaftBracket(prevMotorCad, prevDh)
+                def shaftBracket = makeShaftBracket(prevMotorCad, shaftCad, prevDh)
 
                 def motorBracketSlice = new Cube(
                         0.1,
