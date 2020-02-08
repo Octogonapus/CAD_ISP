@@ -19,21 +19,58 @@ import com.neuronrobotics.sdk.addons.kinematics.LinkConfiguration
 import com.neuronrobotics.sdk.addons.kinematics.DHLink
 import com.neuronrobotics.sdk.addons.kinematics.math.TransformNR
 
-CSG reverseDHValues(CSG incoming, DHLink dh) {
-    println "Reversing " + dh
-    TransformNR step = new TransformNR(dh.DhStep(0))
-    Transform move = TransformFactory.nrToCSG(step)
-    return incoming.transformed(move)
-}
-
-CSG moveDHValues(CSG incoming, DHLink dh) {
-    TransformNR step = new TransformNR(dh.DhStep(0)).inverse()
-    Transform move = TransformFactory.nrToCSG(step)
-    return incoming.transformed(move)
-
-}
-
 class MyCadGen implements ICadGenerator {
+
+    static CSG reverseDHValues(CSG incoming, DHLink dh) {
+        println "Reversing " + dh
+        TransformNR step = new TransformNR(dh.DhStep(0))
+        Transform move = TransformFactory.nrToCSG(step)
+        return incoming.transformed(move)
+    }
+
+    static CSG moveDHValues(CSG incoming, DHLink dh) {
+        TransformNR step = new TransformNR(dh.DhStep(0)).inverse()
+        Transform move = TransformFactory.nrToCSG(step)
+        return incoming.transformed(move)
+    }
+
+    static CSG makeMotorBracket(CSG motorCSG, DHLink link) {
+        CSG motorMountBracket = new Cube(
+                motorCSG.totalX,
+                motorCSG.totalY,
+                5.0
+        ).toCSG()
+
+        // Line up with the mounting face
+        motorMountBracket = motorMountBracket.toZMin()
+
+        // Line up the edges
+        motorMountBracket = motorMountBracket.movex(motorCSG.centerX)
+        motorMountBracket = motorMountBracket.movey(motorCSG.centerY)
+
+        // Cut out mounting points
+        motorMountBracket = motorMountBracket.difference(motorCSG)
+
+        motorMountBracket.setManipulator(link.getListener())
+        motorMountBracket.setColor(Color.BURLYWOOD)
+        return motorMountBracket
+    }
+
+    static CSG makeShaftBracket(CSG motorCSG, DHLink link) {
+        CSG shaftMountBracket = new Cube(
+                motorCSG.totalX,
+                motorCSG.totalY,
+                5.0
+        ).toCSG()
+
+        // Line up with the end of the motor
+        shaftMountBracket = shaftMountBracket.toZMin()
+        shaftMountBracket = shaftMountBracket.movez(motorCSG.maxZ)
+
+        shaftMountBracket.setManipulator(link.getListener())
+        shaftMountBracket.setColor(Color.CYAN)
+        return shaftMountBracket
+    }
 
     @Override
     ArrayList<CSG> generateBody(MobileBase mobileBase) {
@@ -60,19 +97,38 @@ class MyCadGen implements ICadGenerator {
         Affine manipulator = dh.getListener()
 
         TransformNR locationOfMotorMount = new TransformNR(dh.DhStep(0)).inverse()
+        def shaftType = conf.getShaftType()
+        def shaftSize = conf.getShaftSize()
+        def shaftCad = Vitamins.get(shaftType, shaftSize)
         vitaminLocations.put(
                 locationOfMotorMount,
-                [conf.getShaftType(), conf.getShaftSize()] as ArrayList<String>
+                [shaftType, shaftSize]
         )
 
         if (linkIndex != d.getNumberOfLinks() - 1) {
             // If this is not the last link (the last link does not get a motor)
             // The motor for the first link is part of the base
-            LinkConfiguration confPrior = d.getLinkConfiguration(linkIndex + 1)
-            vitaminLocations.put(
-                    new TransformNR(),
-                    [confPrior.getElectroMechanicalType(), confPrior.getElectroMechanicalSize()]
-            )
+            LinkConfiguration nextConf = d.getLinkConfiguration(linkIndex + 1)
+            DHLink nextDh = dhLinks.get(linkIndex + 1)
+
+            def motorType = nextConf.getElectroMechanicalType()
+            def motorSize = nextConf.getElectroMechanicalSize()
+            vitaminLocations.put(new TransformNR(), [motorType, motorSize])
+
+            if (linkIndex != 0) {
+                DHLink prevDh = dhLinks.get(linkIndex - 1)
+                def motorCad = Vitamins.get(motorType, motorSize)
+                def prevMotorCad = Vitamins.get(conf.getElectroMechanicalType(), conf.getElectroMechanicalSize())
+
+                def motorBracket = makeMotorBracket(motorCad, dh)
+                def shaftBracket = makeShaftBracket(prevMotorCad, prevDh)
+                shaftBracket = moveDHValues(shaftBracket, dh)
+                def linkBracket = motorBracket.hull(shaftBracket)
+                linkBracket.setManipulator(dh.getListener())
+                allCad.add(linkBracket)
+//                allCad.add(motorBracket)
+//                allCad.add(shaftBracket)
+            }
         }
 
         double totalMassKg = 0.0
