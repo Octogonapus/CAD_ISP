@@ -72,19 +72,30 @@ class MyCadGen implements ICadGenerator {
     }
 
     static CSG makeShaftBracket(CSG motorCSG, DHLink link) {
-        CSG shaftMountBracket = new Cube(
+        CSG frontShaftMountBracket = new Cube(
                 motorCSG.totalX,
                 motorCSG.totalY,
                 5.0
         ).toCSG()
 
         // Line up with the end of the motor
-        shaftMountBracket = shaftMountBracket.toZMin()
-        shaftMountBracket = shaftMountBracket.movez(motorCSG.maxZ)
+        frontShaftMountBracket = frontShaftMountBracket.toZMin()
+        frontShaftMountBracket = frontShaftMountBracket.movez(motorCSG.maxZ)
 
-        shaftMountBracket.setManipulator(link.getListener())
-        shaftMountBracket.setColor(Color.CYAN)
-        return shaftMountBracket
+        CSG rearShaftMountBracket = new Cube(
+                motorCSG.totalX,
+                motorCSG.totalY,
+                5.0
+        ).toCSG()
+
+        // Line up with the opposite end of the motor
+        rearShaftMountBracket = rearShaftMountBracket.toZMax()
+        rearShaftMountBracket = rearShaftMountBracket.movez(motorCSG.minZ)
+
+        def bracket = frontShaftMountBracket.union(rearShaftMountBracket)
+        bracket.setManipulator(link.getListener())
+        bracket.setColor(Color.CYAN)
+        return bracket
     }
 
     @Override
