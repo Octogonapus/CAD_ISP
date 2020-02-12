@@ -72,6 +72,9 @@ class MyCadGen implements ICadGenerator {
     }
 
     static CSG makeShaftBracket(CSG motorCSG, CSG shaftCSG, DHLink link) {
+        // Make a new size for brushlessBoltOnShaft and use it to mechanically link to the shaft
+        // Accept the CSG for a brushlessBoltOnShaft as a parameter
+        // But don't use it if the motor is a servo; in that case, use the servo horn instead
         double shaftBracketX = Math.max(shaftCSG.totalX + 10.0, motorCSG.totalX)
         double shaftBracketY = Math.max(shaftCSG.totalY + 10.0, motorCSG.totalY)
 
@@ -103,7 +106,17 @@ class MyCadGen implements ICadGenerator {
 
     @Override
     ArrayList<CSG> generateBody(MobileBase mobileBase) {
+//        def vitaminLocations = new HashMap<TransformNR, List<String>>()
         CSG body = new Cube(30).toCSG()
+//        TransformNR locationOfMotorMount = mobileBase.getRobotToFiducialTransform().copy()
+//        vitaminLocations.put(
+//                locationOfMotorMount,
+//                ["ballBearing", "Thrust_1andAHalfinch"]
+//        )
+//        vitaminLocations.put(
+//                locationOfMotorMount.copy(),
+//                []
+//        )
         body.setColor(Color.WHITE)
         body.setManipulator(mobileBase.getRootListener())
         return [body]
@@ -181,6 +194,7 @@ class MyCadGen implements ICadGenerator {
 
                 def connection = motorBracketSlice.hull(shaftBracketSlice)
                 def linkBracket = CSG.unionAll([motorBracket, connection, shaftBracket])
+                // Create a cylinder that encases the motor body and difference it from the linkBracket
                 linkBracket.setManipulator(dh.getListener())
                 allCad.add(linkBracket)
 //                allCad.add(connection)
