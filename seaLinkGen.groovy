@@ -10,6 +10,7 @@ import eu.mihosoft.vrl.v3d.Cube
 import eu.mihosoft.vrl.v3d.Cylinder
 import eu.mihosoft.vrl.v3d.Extrude
 import eu.mihosoft.vrl.v3d.Transform
+import eu.mihosoft.vrl.v3d.Vector3d
 import javafx.scene.paint.Color
 import org.apache.commons.io.IOUtils
 import com.neuronrobotics.bowlerstudio.vitamins.*
@@ -74,8 +75,8 @@ class MyCadGen implements ICadGenerator {
     }
 
     static CSG makeShaftBracket(CSG motorCSG, CSG shaftCSG, CSG shaftCollar, DHLink link) {
-        double shaftBracketX = Math.max(shaftCSG.totalX + 10.0, motorCSG.totalX)
-        double shaftBracketY = Math.max(shaftCSG.totalY + 10.0, motorCSG.totalY)
+        double shaftBracketX = Math.max(shaftCSG.totalX, motorCSG.totalX) + 5.0
+        double shaftBracketY = Math.max(shaftCSG.totalY, motorCSG.totalY) + 5.0
 
         CSG frontShaftMountBracket = new Cube(
                 shaftBracketX,
@@ -93,9 +94,13 @@ class MyCadGen implements ICadGenerator {
                 5.0
         ).toCSG()
 
-        // Line up with the opposite end of the motor
+        // Line up with the opposite end of the motor, aligned with the motor body, and spaced back
+        // off of the motor a bit.
         rearShaftMountBracket = rearShaftMountBracket.toZMax()
+        rearShaftMountBracket = rearShaftMountBracket.toYMin()
         rearShaftMountBracket = rearShaftMountBracket.movez(motorCSG.minZ)
+        rearShaftMountBracket = rearShaftMountBracket.movey(motorCSG.minY)
+        rearShaftMountBracket = rearShaftMountBracket.movez(-10)
 
         def bracket = frontShaftMountBracket.union(rearShaftMountBracket)
         bracket = bracket.difference(shaftCollar.movez(motorCSG.maxZ))
@@ -205,6 +210,7 @@ class MyCadGen implements ICadGenerator {
                 shaftBracket = moveDHValues(shaftBracket, dh)
 
                 def connection = motorBracketSlice.hull(shaftBracketSlice)
+//                connection = connection.toolOffset(5.0)
                 def linkBracket = CSG.unionAll([motorBracket, connection, shaftBracket])
 
                 // Create a cylinder that encases the motor body and difference it from the
@@ -217,10 +223,14 @@ class MyCadGen implements ICadGenerator {
                 double motorCylinderRadius = Math.sqrt(
                         Math.pow(motorMaxX, 2) + Math.pow(motorMaxY, 2)
                 ) + 5.0 // Add a bit for extra keepaway
-                CSG motorCylinder = new Cylinder(motorCylinderRadius, motorCad.totalZ).toCSG()
-                motorCylinder = motorCylinder.movez(-motorCylinder.maxZ + motorCad.maxZ)
-                motorCylinder = moveDHValues(motorCylinder, dh)
-                linkBracket = linkBracket.difference(motorCylinder)
+                CSG motorKeepawayCylinder = new Cylinder(
+                        motorCylinderRadius, motorCad.totalZ
+                ).toCSG()
+                motorKeepawayCylinder = motorKeepawayCylinder.movez(
+                        -motorKeepawayCylinder.maxZ + motorCad.maxZ
+                )
+                motorKeepawayCylinder = moveDHValues(motorKeepawayCylinder, dh)
+                linkBracket = linkBracket.difference(motorKeepawayCylinder)
 
                 linkBracket.setManipulator(dh.getListener())
                 allCad.add(linkBracket)
