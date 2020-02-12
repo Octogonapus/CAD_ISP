@@ -7,6 +7,8 @@ import com.neuronrobotics.sdk.addons.kinematics.MobileBase
 import com.neuronrobotics.sdk.addons.kinematics.math.RotationNR
 import eu.mihosoft.vrl.v3d.CSG
 import eu.mihosoft.vrl.v3d.Cube
+import eu.mihosoft.vrl.v3d.Cylinder
+import eu.mihosoft.vrl.v3d.Extrude
 import eu.mihosoft.vrl.v3d.Transform
 import javafx.scene.paint.Color
 import org.apache.commons.io.IOUtils
@@ -72,9 +74,6 @@ class MyCadGen implements ICadGenerator {
     }
 
     static CSG makeShaftBracket(CSG motorCSG, CSG shaftCSG, CSG shaftCollar, DHLink link) {
-        // Make a new size for brushlessBoltOnShaft and use it to mechanically link to the shaft
-        // Accept the CSG for a brushlessBoltOnShaft as a parameter
-        // But don't use it if the motor is a servo; in that case, use the servo horn instead
         double shaftBracketX = Math.max(shaftCSG.totalX + 10.0, motorCSG.totalX)
         double shaftBracketY = Math.max(shaftCSG.totalY + 10.0, motorCSG.totalY)
 
@@ -207,7 +206,22 @@ class MyCadGen implements ICadGenerator {
 
                 def connection = motorBracketSlice.hull(shaftBracketSlice)
                 def linkBracket = CSG.unionAll([motorBracket, connection, shaftBracket])
-                // Create a cylinder that encases the motor body and difference it from the linkBracket
+
+                // Create a cylinder that encases the motor body and difference it from the
+                // linkBracket. The z axis of the cylinder needs to be the same as the z axis of
+                // the motor (because that's the rotation axis of the link). The radius of the
+                // cylinder needs to be big enough to encompass the entire motor if it was revolved
+                // 360 degrees around its z axis.
+                double motorMaxX = Math.max(Math.abs(motorCad.maxX), Math.abs(motorCad.minX))
+                double motorMaxY = Math.max(Math.abs(motorCad.maxY), Math.abs(motorCad.minY))
+                double motorCylinderRadius = Math.sqrt(
+                        Math.pow(motorMaxX, 2) + Math.pow(motorMaxY, 2)
+                ) + 5.0 // Add a bit for extra keepaway
+                CSG motorCylinder = new Cylinder(motorCylinderRadius, motorCad.totalZ).toCSG()
+                motorCylinder = motorCylinder.movez(-motorCylinder.maxZ + motorCad.maxZ)
+                motorCylinder = moveDHValues(motorCylinder, dh)
+                linkBracket = linkBracket.difference(motorCylinder)
+
                 linkBracket.setManipulator(dh.getListener())
                 allCad.add(linkBracket)
 //                allCad.add(connection)
