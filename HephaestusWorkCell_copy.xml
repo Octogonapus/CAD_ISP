@@ -52,9 +52,9 @@
 	</vitamins>
 	<passive>false</passive>
 	<mass>0.0955</mass>
-	<centerOfMassFromCentroid>	<x>0.0</x>
-	<y>0.13358638743455498</y>
-	<z>-2.9662136621267926E-17</z>
+	<centerOfMassFromCentroid>	<x>-0.031375303281828616</x>
+	<y>0.12189806164606898</y>
+	<z>-0.05464600145249602</z>
 	<rotw>1.0</rotw>
 	<rotx>-0.0</rotx>
 	<roty>-0.0</roty>
@@ -69,9 +69,9 @@
 
 	<DHParameters>
 		<Delta>135.0</Delta>
-		<Theta>0.0</Theta>
-		<Radius>0.0</Radius>
-		<Alpha>-90.0</Alpha>
+		<Theta>19.756097560975633</Theta>
+		<Radius>31.70731707317073</Radius>
+		<Alpha>-65.85365853658537</Alpha>
 	</DHParameters>
 
 </link>
@@ -106,9 +106,9 @@
 	</vitamins>
 	<passive>false</passive>
 	<mass>0.20400000000000001</mass>
-	<centerOfMassFromCentroid>	<x>-0.17414215686274512</x>
-	<y>0.0</y>
-	<z>-49.75490196078431</z>
+	<centerOfMassFromCentroid>	<x>-0.696437111429938</x>
+	<y>0.11140741983747197</y>
+	<z>-0.2747606013412503</z>
 	<rotw>1.0</rotw>
 	<rotx>-0.0</rotx>
 	<roty>-0.0</roty>
@@ -122,10 +122,10 @@
 	<rotz>-0.0</rotz></imuFromCentroid>
 
 	<DHParameters>
-		<Delta>0.0</Delta>
-		<Theta>0.0</Theta>
-		<Radius>175.0</Radius>
-		<Alpha>0.0</Alpha>
+		<Delta>51.21951219512195</Delta>
+		<Theta>-24.146341463414647</Theta>
+		<Radius>142.0731707317073</Radius>
+		<Alpha>-26.34146341463415</Alpha>
 	</DHParameters>
 
 </link>
@@ -247,7 +247,7 @@
 	</vitamins>
 	<passive>false</passive>
 	<mass>0.121</mass>
-	<centerOfMassFromCentroid>	<x>-0.49586776859504134</x>
+	<centerOfMassFromCentroid>	<x>-0.05950413223140496</x>
 	<y>0.0</y>
 	<z>0.0</z>
 	<rotw>1.0</rotw>
@@ -301,8 +301,8 @@
 	</vitamins>
 	<passive>false</passive>
 	<mass>0.121</mass>
-	<centerOfMassFromCentroid>	<x>-0.09223140495867768</x>
-	<y>1.4831941132554765E-17</y>
+	<centerOfMassFromCentroid>	<x>-0.768595041322314</x>
+	<y>1.235995094379564E-16</y>
 	<z>0.0</z>
 	<rotw>1.0</rotw>
 	<rotx>-0.0</rotx>
