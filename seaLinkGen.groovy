@@ -1,30 +1,13 @@
 import com.neuronrobotics.bowlerstudio.BowlerStudio
 import com.neuronrobotics.bowlerstudio.creature.ICadGenerator
-import com.neuronrobotics.bowlerstudio.creature.CreatureLab
 import com.neuronrobotics.bowlerstudio.physics.TransformFactory
-import com.neuronrobotics.sdk.addons.kinematics.AbstractLink
-import com.neuronrobotics.sdk.addons.kinematics.DHParameterKinematics
-import com.neuronrobotics.sdk.addons.kinematics.MobileBase
+import com.neuronrobotics.bowlerstudio.vitamins.Vitamins
+import com.neuronrobotics.sdk.addons.kinematics.*
 import com.neuronrobotics.sdk.addons.kinematics.math.RotationNR
-import eu.mihosoft.vrl.v3d.CSG
-import eu.mihosoft.vrl.v3d.Cube
-import eu.mihosoft.vrl.v3d.Cylinder
-import eu.mihosoft.vrl.v3d.Extrude
-import eu.mihosoft.vrl.v3d.Parabola
-import eu.mihosoft.vrl.v3d.Transform
-import eu.mihosoft.vrl.v3d.Vector3d
-import javafx.scene.paint.Color
-import org.apache.commons.io.IOUtils
-import com.neuronrobotics.bowlerstudio.vitamins.*
-import java.nio.file.Paths
-import eu.mihosoft.vrl.v3d.FileUtil
-import com.neuronrobotics.bowlerstudio.vitamins.*
-import javafx.scene.transform.Affine
-import com.neuronrobotics.sdk.addons.kinematics.LinkConfiguration
-import com.neuronrobotics.sdk.addons.kinematics.DHLink
 import com.neuronrobotics.sdk.addons.kinematics.math.TransformNR
-
-import java.util.function.Consumer
+import eu.mihosoft.vrl.v3d.*
+import javafx.scene.paint.Color
+import javafx.scene.transform.Affine
 
 class MyCadGen implements ICadGenerator {
 
