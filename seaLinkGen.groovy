@@ -1,3 +1,4 @@
+import com.neuronrobotics.bowlerstudio.BowlerStudio
 import com.neuronrobotics.bowlerstudio.creature.ICadGenerator
 import com.neuronrobotics.bowlerstudio.creature.CreatureLab
 import com.neuronrobotics.bowlerstudio.physics.TransformFactory
@@ -9,6 +10,7 @@ import eu.mihosoft.vrl.v3d.CSG
 import eu.mihosoft.vrl.v3d.Cube
 import eu.mihosoft.vrl.v3d.Cylinder
 import eu.mihosoft.vrl.v3d.Extrude
+import eu.mihosoft.vrl.v3d.Parabola
 import eu.mihosoft.vrl.v3d.Transform
 import eu.mihosoft.vrl.v3d.Vector3d
 import javafx.scene.paint.Color
@@ -22,7 +24,15 @@ import com.neuronrobotics.sdk.addons.kinematics.LinkConfiguration
 import com.neuronrobotics.sdk.addons.kinematics.DHLink
 import com.neuronrobotics.sdk.addons.kinematics.math.TransformNR
 
+import java.util.function.Consumer
+
 class MyCadGen implements ICadGenerator {
+
+    private double grid
+
+    MyCadGen(double grid) {
+        this.grid = grid
+    }
 
     static CSG reverseDHValues(CSG incoming, DHLink dh) {
         println "Reversing " + dh
@@ -111,20 +121,111 @@ class MyCadGen implements ICadGenerator {
 
     @Override
     ArrayList<CSG> generateBody(MobileBase mobileBase) {
-//        def vitaminLocations = new HashMap<TransformNR, List<String>>()
-        CSG body = new Cube(30).toCSG()
-//        TransformNR locationOfMotorMount = mobileBase.getRobotToFiducialTransform().copy()
-//        vitaminLocations.put(
-//                locationOfMotorMount,
-//                ["ballBearing", "Thrust_1andAHalfinch"]
-//        )
-//        vitaminLocations.put(
-//                locationOfMotorMount.copy(),
-//                []
-//        )
-        body.setColor(Color.WHITE)
-        body.setManipulator(mobileBase.getRootListener())
-        return [body]
+        def vitaminLocations = new HashMap<TransformNR, List<String>>()
+        def allCad = new ArrayList<CSG>()
+        double baseGrid = grid * 2
+        double baseBoltThickness = 15
+        double baseCoreheight = 1
+        String boltsize = "M5x25"
+        def thrustBearingSize = "Thrust_1andAHalfinch"
+        for (DHParameterKinematics d : mobileBase.getAllDHChains()) {
+            // Hardware to engineering units configuration
+            LinkConfiguration conf = d.getLinkConfiguration(0)
+            // loading the vitamins referenced in the configuration
+            TransformNR locationOfMotorMount = d.getRobotToFiducialTransform()
+            TransformNR locationOfMotorMountCopy = locationOfMotorMount.copy()
+            if (locationOfMotorMount.getZ() > baseCoreheight)
+                baseCoreheight = locationOfMotorMount.getZ()
+            vitaminLocations.put(locationOfMotorMountCopy, [
+                    "ballBearing",
+                    thrustBearingSize
+            ])
+            vitaminLocations.put(locationOfMotorMount, [
+                    conf.getElectroMechanicalType(),
+                    conf.getElectroMechanicalSize()
+            ])
+        }
+        def insert = ["heatedThreadedInsert", "M5"]
+        def insertMeasurements = Vitamins.getConfiguration(insert[0], insert[1])
+        def mountLocations = [new TransformNR(baseGrid, baseGrid, 0, new RotationNR(180, 0, 0)),
+                              new TransformNR(baseGrid, -baseGrid, 0, new RotationNR(180, 0, 0)),
+                              new TransformNR(-baseGrid, baseGrid, 0, new RotationNR(180, 0, 0)),
+                              new TransformNR(-baseGrid, -baseGrid, 0, new RotationNR(180, 0, 0))]
+        mountLocations.each {
+            vitaminLocations.put(it, ["capScrew", boltsize])
+            vitaminLocations.put(it.copy().translateZ(insertMeasurements.installLength as double), insert)
+        }
+
+        double totalMass = 0
+        TransformNR centerOfMassFromCentroid = new TransformNR()
+        for (TransformNR tr : vitaminLocations.keySet()) {
+            def vitaminType = vitaminLocations.get(tr)[0]
+            def vitaminSize = vitaminLocations.get(tr)[1]
+
+            HashMap<String, Object> measurements = Vitamins.getConfiguration(vitaminType, vitaminSize)
+
+            CSG vitaminCad = Vitamins.get(vitaminType, vitaminSize)
+            Transform move = TransformFactory.nrToCSG(tr)
+            CSG part = vitaminCad.transformed(move)
+            part.setManipulator(mobileBase.getRootListener())
+            allCad.add(part)
+
+            double massCentroidYValue = measurements.massCentroidY as double
+            double massCentroidXValue = measurements.massCentroidX as double
+            double massCentroidZValue = measurements.massCentroidZ as double
+            double massKgValue = measurements.massKg as double
+            println "Base Vitamin " + vitaminType + " " + vitaminSize
+            try {
+                TransformNR COMCentroid = tr.times(new TransformNR(
+                        massCentroidXValue, massCentroidYValue, massCentroidZValue, new RotationNR()
+                ))
+                totalMass += massKgValue
+            } catch (Exception ex) {
+                BowlerStudio.printStackTrace(ex)
+            }
+
+            //do com calculation here for centerOfMassFromCentroid and totalMass
+        }
+        //Do additional CAD and add to the running CoM
+        def thrustMeasurements = Vitamins.getConfiguration("ballBearing",
+                thrustBearingSize)
+        CSG baseCore = new Cylinder(
+                thrustMeasurements.outerDiameter / 2 + 5,
+                baseCoreheight + thrustMeasurements.width / 2
+        ).toCSG()
+        CSG baseCoreshort = new Cylinder(
+                thrustMeasurements.outerDiameter / 2 + 5,
+                baseCoreheight * 3.0 / 4.0
+        ).toCSG()
+        CSG mountLug = new Cylinder(15, baseBoltThickness).toCSG().toZMax()
+        CSG mountCap = Parabola.coneByHeight(15, 20)
+                .rotx(-90)
+                .toZMax()
+                .movez(-baseBoltThickness)
+        def coreParts = [baseCore]
+        mountLocations.each {
+            def place = TransformFactory.nrToCSG(it)
+            coreParts.add(CSG.hullAll(mountLug.transformed(place), baseCoreshort))
+            coreParts.add(mountCap.transformed(place))
+        }
+
+        // assemble the base
+        CSG wire = new Cube(17, 200, 5).toCSG()
+                .toZMin()
+                .toYMin()
+        CSG vitamin_roundMotor_WPI_gb37y3530_50en = Vitamins.get("roundMotor", "WPI-gb37y3530-50en")
+                .toZMin()
+                .union(wire)
+        allCad.add(vitamin_roundMotor_WPI_gb37y3530_50en)
+
+        def baseCad = CSG.unionAll(coreParts).difference(vitamin_roundMotor_WPI_gb37y3530_50en)
+        baseCad.setManipulator(mobileBase.getRootListener())
+        allCad.add(baseCad)
+
+        mobileBase.setMassKg(totalMass)
+        mobileBase.setCenterOfMassFromCentroid(centerOfMassFromCentroid)
+
+        return allCad
     }
 
     @Override
@@ -288,4 +389,4 @@ class MyCadGen implements ICadGenerator {
     }
 }
 
-return new MyCadGen()
+return new MyCadGen(25.0)
