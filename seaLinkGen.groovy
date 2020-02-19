@@ -308,20 +308,18 @@ class MyCadGen implements ICadGenerator {
                 }
                 def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh)
 
-//                CSG motorBracketSlice = createMotorBracketSlice(motorBracket)
-//
-//                CSG shaftBracketSlice = createShaftBracketSlice(shaftBracket, dh)
+                CSG motorBracketSlice = createMotorBracketSlice(motorBracket)
+
+                CSG shaftBracketSlice = createShaftBracketSlice(shaftBracket, dh)
                 shaftBracket = moveDHValues(shaftBracket, dh)
 
-//                def connection = motorBracketSlice.hull(shaftBracketSlice)
-//                def linkBracket = CSG.unionAll([motorBracket, connection, shaftBracket])
+                def connection = motorBracketSlice.hull(shaftBracketSlice)
 
-//                CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
-//                linkBracket = linkBracket.difference(motorKeepawayCylinder)
-//
-//                linkBracket.setManipulator(dh.getListener())
-//                allCad.add(linkBracket)
-                def linkCSGs = [motorBracket, shaftBracket]
+                CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
+                connection = connection.difference(motorKeepawayCylinder)
+                connection.setColor(Color.MEDIUMPURPLE)
+
+                def linkCSGs = [motorBracket, shaftBracket, connection]
                 linkCSGs.each {
                     it.setManipulator(dh.getListener())
                 }
@@ -408,14 +406,14 @@ class MyCadGen implements ICadGenerator {
                 shaftBracket.totalY,
                 shaftBracket.totalZ
         ).toCSG()
-        // Center it in the motor
-        shaftBracketSlice = shaftBracketSlice.move(shaftBracket.center)
-        // Move it to the edge of the motor bracket
-        shaftBracketSlice = shaftBracketSlice.movex(shaftBracket.maxX)
-        // Get the slice of the bracket
+        shaftBracketSlice = shaftBracketSlice
+                .toXMax()
+                .movex(shaftBracket.maxX)
+                .movey(shaftBracket.centerY)
+                .movez(shaftBracket.centerZ)
         shaftBracketSlice = shaftBracketSlice.intersect(shaftBracket)
-
         shaftBracketSlice = moveDHValues(shaftBracketSlice, dh)
+        shaftBracketSlice.setColor(Color.BLACK)
         shaftBracketSlice
     }
 
@@ -425,12 +423,13 @@ class MyCadGen implements ICadGenerator {
                 motorBracket.totalY,
                 motorBracket.totalZ
         ).toCSG()
-        // Center it in the motor
-        motorBracketSlice = motorBracketSlice.move(motorBracket.center)
-        // Move it to the edge of the motor bracket
-        motorBracketSlice = motorBracketSlice.movex(motorBracket.minX)
-        // Get the slice of the bracket
+        motorBracketSlice = motorBracketSlice
+                .toXMin()
+                .movex(motorBracket.minX)
+                .movey(motorBracket.centerY)
+                .movez(motorBracket.centerZ)
         motorBracketSlice = motorBracketSlice.intersect(motorBracket)
+        motorBracketSlice.setColor(Color.BLACK)
         motorBracketSlice
     }
 
