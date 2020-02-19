@@ -11,11 +11,13 @@ import javafx.scene.transform.Affine
 
 class MyCadGen implements ICadGenerator {
 
-    private double grid
-
-    MyCadGen(double grid) {
-        this.grid = grid
-    }
+    private double grid = 25.0
+    private double rearMotorBracketWidth = 15.0
+    private double rearMotorBracketThickness = 5.0
+    private double passiveHingePinRadius = 2.5
+    private double passiveHingePinHeight = 5.0
+    private double rearShaftBracketWidth = rearMotorBracketWidth
+    private double rearShaftBracketThickness = rearMotorBracketThickness
 
     static CSG reverseDHValues(CSG incoming, DHLink dh) {
         println "Reversing " + dh
@@ -30,7 +32,22 @@ class MyCadGen implements ICadGenerator {
         return incoming.transformed(move)
     }
 
-    static CSG makeMotorBracket(CSG motorCSG, DHLink link) {
+    CSG makePassiveHingePin() {
+        // Half height because we just want to "overwrite" the corner radius on the bottom half
+        CSG bottomHalf = new Cylinder(passiveHingePinRadius, passiveHingePinHeight / 2)
+                .toCSG()
+                .toZMax()
+
+        CSG topHalf = new RoundedCylinder(passiveHingePinRadius, passiveHingePinHeight)
+                .cornerRadius(1.0)
+                .toCSG()
+                .toZMax()
+
+        CSG passiveHingePin = CSG.unionAll([bottomHalf, topHalf])
+        return passiveHingePin
+    }
+
+    CSG makeMotorBracket(CSG motorCSG, DHLink link) {
         // Motor bracket thickness is from z=0 to maxZ. Bolt heads will be flush with the top
         //  of the bracket.
         CSG frontMotorMountBracket = new Cube(
@@ -42,7 +59,7 @@ class MyCadGen implements ICadGenerator {
         // Line up with the mounting face
         frontMotorMountBracket = frontMotorMountBracket.toZMin()
 
-        // Line up the edges
+        // Center it with the motor
         frontMotorMountBracket = frontMotorMountBracket.movex(motorCSG.centerX)
         frontMotorMountBracket = frontMotorMountBracket.movey(motorCSG.centerY)
 
@@ -50,26 +67,35 @@ class MyCadGen implements ICadGenerator {
         frontMotorMountBracket = frontMotorMountBracket.difference(motorCSG)
 
         CSG rearMotorMountBracket = new Cube(
-                motorCSG.totalX,
-                motorCSG.totalY,
-                5.0
+                rearMotorBracketWidth,
+                rearMotorBracketWidth,
+                rearMotorBracketThickness
         ).toCSG()
 
         // Line up with back face
         rearMotorMountBracket = rearMotorMountBracket.toZMax()
         rearMotorMountBracket = rearMotorMountBracket.movez(motorCSG.minZ)
 
-        // Line up the edges
+        // Center it with the motor
         rearMotorMountBracket = rearMotorMountBracket.movex(motorCSG.centerX)
         rearMotorMountBracket = rearMotorMountBracket.movey(motorCSG.centerY)
 
-        def bracket = frontMotorMountBracket.union(rearMotorMountBracket)
+        CSG passiveHingePin = makePassiveHingePin()
+
+        // Line up with the back of the rear bracket
+        passiveHingePin = passiveHingePin.movez(rearMotorMountBracket.minZ)
+
+        // Center it with the motor
+        passiveHingePin = passiveHingePin.movex(motorCSG.centerX)
+        passiveHingePin = passiveHingePin.movey(motorCSG.centerY)
+
+        def bracket = CSG.unionAll([frontMotorMountBracket, rearMotorMountBracket, passiveHingePin])
         bracket.setManipulator(link.getListener())
         bracket.setColor(Color.BURLYWOOD)
         return bracket
     }
 
-    static CSG makeShaftBracket(CSG motorCSG, CSG shaftCSG, CSG shaftCollar, DHLink link) {
+    CSG makeShaftBracket(CSG motorCSG, CSG shaftCSG, CSG shaftCollar, DHLink link) {
         double shaftBracketX = Math.max(shaftCSG.totalX, motorCSG.totalX) + 5.0
         double shaftBracketY = Math.max(shaftCSG.totalY, motorCSG.totalY) + 5.0
 
@@ -84,18 +110,21 @@ class MyCadGen implements ICadGenerator {
         frontShaftMountBracket = frontShaftMountBracket.movez(motorCSG.maxZ)
 
         CSG rearShaftMountBracket = new Cube(
-                shaftBracketX,
-                shaftBracketY,
-                5.0
+                rearShaftBracketWidth,
+                rearShaftBracketWidth,
+                rearShaftBracketThickness
         ).toCSG()
-
-        // Line up with the opposite end of the motor, aligned with the motor body, and spaced back
-        // off of the motor a bit.
         rearShaftMountBracket = rearShaftMountBracket.toZMax()
-        rearShaftMountBracket = rearShaftMountBracket.toYMin()
+
+        // Make a space for the passive hinge pin
+        CSG passiveHingePin = makePassiveHingePin()
+        rearShaftMountBracket = rearShaftMountBracket.difference(passiveHingePin)
+
+        // Line up centered with the motor body and at the end of the rear motor bracket
         rearShaftMountBracket = rearShaftMountBracket.movez(motorCSG.minZ)
-        rearShaftMountBracket = rearShaftMountBracket.movey(motorCSG.minY)
-        rearShaftMountBracket = rearShaftMountBracket.movez(-10)
+        rearShaftMountBracket = rearShaftMountBracket.movex(motorCSG.centerX)
+        rearShaftMountBracket = rearShaftMountBracket.movey(motorCSG.centerY)
+        rearShaftMountBracket = rearShaftMountBracket.movez(-rearMotorBracketThickness)
 
         def bracket = frontShaftMountBracket.union(rearShaftMountBracket)
         bracket = bracket.difference(shaftCollar.movez(motorCSG.maxZ))
@@ -411,4 +440,4 @@ class MyCadGen implements ICadGenerator {
     }
 }
 
-return new MyCadGen(25.0)
+return new MyCadGen()
