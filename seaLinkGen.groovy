@@ -31,10 +31,12 @@ class MyCadGen implements ICadGenerator {
     }
 
     static CSG makeMotorBracket(CSG motorCSG, DHLink link) {
+        // Motor bracket thickness is from z=0 to maxZ. Bolt heads will be flush with the top
+        //  of the bracket.
         CSG frontMotorMountBracket = new Cube(
                 motorCSG.totalX,
                 motorCSG.totalY,
-                5.0
+                motorCSG.maxZ
         ).toCSG()
 
         // Line up with the mounting face
