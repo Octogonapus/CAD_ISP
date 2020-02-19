@@ -326,33 +326,30 @@ class MyCadGen implements ICadGenerator {
                 allCad.addAll(linkCSGs)
             }
         } else if (linkIndex == d.getNumberOfLinks() - 1) {
-//            // This is the last link
-//            DHLink prevDh = dhLinks.get(linkIndex - 1)
-//
-//            CSG shaftCollar
-//            if (motorType == "hobbyServo") {
-//                // The shaft for a servo is the horn, so just difference that
-//                shaftCollar = shaftCad
-//            } else {
-//                // Otherwise we need to bolt something onto the shaft to mesh with the link
-//                // bracket, so use a shaft collar
-//                shaftCollar = Vitamins.get("brushlessBoltOnShaft", "sunnysky_x2204")
-//            }
-//            def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh)
-//
-//            CSG shaftBracketSlice = createShaftBracketSlice(shaftBracket, dh)
-//            shaftBracket = moveDHValues(shaftBracket, dh)
-//
-//            def endEffector = new Cube(10.0).toCSG()
-//            def connection = endEffector.hull(shaftBracketSlice)
-//
-//            def linkBracket = CSG.unionAll([shaftBracket, connection])
-//
-//            CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
-//            linkBracket = linkBracket.difference(motorKeepawayCylinder)
-//
-//            linkBracket.setManipulator(dh.getListener())
-//            allCad.add(linkBracket)
+            CSG shaftCollar
+            if (motorType == "hobbyServo") {
+                // The shaft for a servo is the horn, so just difference that
+                shaftCollar = shaftCad
+            } else {
+                // Otherwise we need to bolt something onto the shaft to mesh with the link
+                // bracket, so use a shaft collar
+                shaftCollar = Vitamins.get("brushlessBoltOnShaft", "sunnysky_x2204")
+            }
+            def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh)
+
+            CSG shaftBracketSlice = createShaftBracketSlice(shaftBracket, dh)
+            shaftBracket = moveDHValues(shaftBracket, dh)
+
+            def endEffector = new Cube(10.0).toCSG()
+            def connection = endEffector.hull(shaftBracketSlice)
+
+            def linkBracket = CSG.unionAll([shaftBracket, connection])
+
+            CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
+            linkBracket = linkBracket.difference(motorKeepawayCylinder)
+
+            linkBracket.setManipulator(dh.getListener())
+            allCad.add(linkBracket)
         }
 
         double totalMassKg = 0.0
