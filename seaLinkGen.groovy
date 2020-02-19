@@ -341,15 +341,20 @@ class MyCadGen implements ICadGenerator {
             shaftBracket = moveDHValues(shaftBracket, dh)
 
             def endEffector = new Cube(10.0).toCSG()
-            def connection = endEffector.hull(shaftBracketSlice)
+            endEffector.setColor(Color.DARKOLIVEGREEN)
+            CSG endEffectorSlice = createMotorBracketSlice(endEffector)
 
-            def linkBracket = CSG.unionAll([shaftBracket, connection])
+            def connection = endEffectorSlice.hull(shaftBracketSlice)
 
             CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
-            linkBracket = linkBracket.difference(motorKeepawayCylinder)
+            connection = connection.difference(motorKeepawayCylinder)
+            connection.setColor(Color.MEDIUMPURPLE)
 
-            linkBracket.setManipulator(dh.getListener())
-            allCad.add(linkBracket)
+            def linkCSGs = [endEffector, shaftBracket, connection]
+            linkCSGs.each {
+                it.setManipulator(dh.getListener())
+            }
+            allCad.addAll(linkCSGs)
         }
 
         double totalMassKg = 0.0
