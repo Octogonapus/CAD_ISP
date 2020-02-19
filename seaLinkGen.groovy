@@ -309,12 +309,24 @@ class MyCadGen implements ICadGenerator {
                 def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh)
 
                 CSG motorBracketSlice = createNegXSlice(motorBracket)
+                CSG connectionMotorBracketMount = new Cube(5.0, motorBracketSlice.totalY, motorBracketSlice.totalZ).toCSG()
+                connectionMotorBracketMount = connectionMotorBracketMount
+                        .toXMax()
+                        .movex(motorBracketSlice.minX)
+                        .movey(motorBracketSlice.centerY)
+                        .movez(motorBracketSlice.centerZ)
 
                 CSG shaftBracketSlice = createPosXSlice(shaftBracket, dh)
-                shaftBracketSlice = moveDHValues(shaftBracketSlice, dh)
+                CSG connectionShaftBracketMount = new Cube(5.0, shaftBracketSlice.totalY, shaftBracketSlice.totalZ).toCSG()
+                connectionShaftBracketMount = connectionShaftBracketMount
+                        .toXMin()
+                        .movex(shaftBracketSlice.maxX)
+                        .movey(shaftBracketSlice.centerY)
+                        .movez(shaftBracketSlice.centerZ)
                 shaftBracket = moveDHValues(shaftBracket, dh)
+                connectionShaftBracketMount = moveDHValues(connectionShaftBracketMount, dh)
 
-                def connection = motorBracketSlice.hull(shaftBracketSlice)
+                def connection = connectionMotorBracketMount.hull(connectionShaftBracketMount)
 
                 CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
                 connection = connection.difference(motorKeepawayCylinder)
@@ -356,6 +368,8 @@ class MyCadGen implements ICadGenerator {
             connectionEndEffectorMount = connectionEndEffectorMount
                     .toXMax()
                     .movex(endEffectorSlice.minX)
+                    .movey(endEffectorSlice.centerY)
+                    .movez(endEffectorSlice.centerZ)
 
             def connection = connectionShaftBracketMount.hull(connectionEndEffectorMount)
 
