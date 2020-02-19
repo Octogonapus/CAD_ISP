@@ -308,9 +308,10 @@ class MyCadGen implements ICadGenerator {
                 }
                 def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh)
 
-                CSG motorBracketSlice = createMotorBracketSlice(motorBracket)
+                CSG motorBracketSlice = createNegXSlice(motorBracket)
 
-                CSG shaftBracketSlice = createShaftBracketSlice(shaftBracket, dh)
+                CSG shaftBracketSlice = createPosXSlice(shaftBracket, dh)
+                shaftBracketSlice = moveDHValues(shaftBracketSlice, dh)
                 shaftBracket = moveDHValues(shaftBracket, dh)
 
                 def connection = motorBracketSlice.hull(shaftBracketSlice)
@@ -337,18 +338,32 @@ class MyCadGen implements ICadGenerator {
             }
             def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh)
 
-            CSG shaftBracketSlice = createShaftBracketSlice(shaftBracket, dh)
+            CSG shaftBracketSlice = createPosXSlice(shaftBracket, dh)
+            CSG connectionShaftBracketMount = new Cube(5.0, shaftBracketSlice.totalY, shaftBracketSlice.totalZ).toCSG()
+            connectionShaftBracketMount = connectionShaftBracketMount
+                    .toXMin()
+                    .movex(shaftBracketSlice.maxX)
+                    .movey(shaftBracketSlice.centerY)
+                    .movez(shaftBracketSlice.centerZ)
             shaftBracket = moveDHValues(shaftBracket, dh)
+            connectionShaftBracketMount = moveDHValues(connectionShaftBracketMount, dh)
 
             def endEffector = new Cube(10.0).toCSG()
             endEffector.setColor(Color.DARKOLIVEGREEN)
-            CSG endEffectorSlice = createMotorBracketSlice(endEffector)
 
-            def connection = endEffectorSlice.hull(shaftBracketSlice)
+            CSG endEffectorSlice = createNegXSlice(endEffector)
+            CSG connectionEndEffectorMount = new Cube(5.0, endEffectorSlice.totalY, endEffectorSlice.totalZ).toCSG()
+            connectionEndEffectorMount = connectionEndEffectorMount
+                    .toXMax()
+                    .movex(endEffectorSlice.minX)
+
+            def connection = connectionShaftBracketMount.hull(connectionEndEffectorMount)
 
             CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
             connection = connection.difference(motorKeepawayCylinder)
             connection.setColor(Color.MEDIUMPURPLE)
+            connectionShaftBracketMount.setColor(Color.MEDIUMPURPLE)
+            connectionEndEffectorMount.setColor(Color.MEDIUMPURPLE)
 
             def linkCSGs = [endEffector, shaftBracket, connection]
             linkCSGs.each {
@@ -402,7 +417,7 @@ class MyCadGen implements ICadGenerator {
         return allCad
     }
 
-    private CSG createShaftBracketSlice(CSG shaftBracket, DHLink dh) {
+    private static CSG createPosXSlice(CSG shaftBracket, DHLink dh) {
         def shaftBracketSlice = new Cube(
                 0.1,
                 shaftBracket.totalY,
@@ -414,12 +429,11 @@ class MyCadGen implements ICadGenerator {
                 .movey(shaftBracket.centerY)
                 .movez(shaftBracket.centerZ)
         shaftBracketSlice = shaftBracketSlice.intersect(shaftBracket)
-        shaftBracketSlice = moveDHValues(shaftBracketSlice, dh)
         shaftBracketSlice.setColor(Color.BLACK)
         shaftBracketSlice
     }
 
-    private CSG createMotorBracketSlice(CSG motorBracket) {
+    private static CSG createNegXSlice(CSG motorBracket) {
         def motorBracketSlice = new Cube(
                 0.1,
                 motorBracket.totalY,
