@@ -18,6 +18,7 @@ class MyCadGen implements ICadGenerator {
     private double passiveHingePinHeight = 5.0
     private double rearShaftBracketWidth = rearMotorBracketWidth
     private double rearShaftBracketThickness = rearMotorBracketThickness
+    private double bridgeThickness = 5.0
 
     static CSG reverseDHValues(CSG incoming, DHLink dh) {
         println "Reversing " + dh
@@ -56,6 +57,10 @@ class MyCadGen implements ICadGenerator {
                 motorCSG.maxZ
         ).toCSG()
 
+        def linkRLength = -motorCSG.minX + bridgeThickness
+        CSG linkRFront = new Cube(linkRLength, motorCSG.totalY, motorCSG.maxZ).toCSG().toXMax()
+        frontMotorMountBracket = frontMotorMountBracket.union(linkRFront)
+
         // Line up with the mounting face
         frontMotorMountBracket = frontMotorMountBracket.toZMin()
 
@@ -72,25 +77,24 @@ class MyCadGen implements ICadGenerator {
                 rearMotorBracketThickness
         ).toCSG()
 
+        CSG linkRRear = new Cube(linkRLength, rearMotorBracketWidth, rearMotorBracketThickness).toCSG().toXMax()
+        rearMotorMountBracket = rearMotorMountBracket.union(linkRRear)
+
         // Line up with back face
         rearMotorMountBracket = rearMotorMountBracket.toZMax()
         rearMotorMountBracket = rearMotorMountBracket.movez(motorCSG.minZ)
 
-        // Center it with the motor
-        rearMotorMountBracket = rearMotorMountBracket.movex(motorCSG.centerX)
-        rearMotorMountBracket = rearMotorMountBracket.movey(motorCSG.centerY)
+        def frontAndRearBrackets = CSG.unionAll([frontMotorMountBracket, rearMotorMountBracket])
+        def bridge = new Cube(bridgeThickness, motorCSG.totalY, frontAndRearBrackets.totalZ).toCSG()
+        bridge = bridge.toZMax().movez(frontAndRearBrackets.maxZ)
+        bridge = bridge.toXMin().movex(frontAndRearBrackets.minX)
+        bridge = bridge.movey(motorCSG.centerY)
 
         CSG passiveHingePin = makePassiveHingePin()
-
         // Line up with the back of the rear bracket
         passiveHingePin = passiveHingePin.movez(rearMotorMountBracket.minZ)
 
-        // Center it with the motor
-        passiveHingePin = passiveHingePin.movex(motorCSG.centerX)
-        passiveHingePin = passiveHingePin.movey(motorCSG.centerY)
-
-        def bracket = CSG.unionAll([frontMotorMountBracket, rearMotorMountBracket, passiveHingePin])
-        bracket.setManipulator(link.getListener())
+        def bracket = CSG.unionAll([frontAndRearBrackets, bridge, passiveHingePin])
         bracket.setColor(Color.BURLYWOOD)
         return bracket
     }
@@ -105,6 +109,10 @@ class MyCadGen implements ICadGenerator {
                 5.0
         ).toCSG()
 
+        def limitedR = Math.sqrt(Math.pow(Math.max(motorCSG.maxX, -motorCSG.minX), 2) + Math.pow(Math.max(motorCSG.maxY, -motorCSG.minY), 2)) + bridgeThickness
+        CSG linkRFront = new Cube(limitedR, shaftBracketY, 5.0).toCSG().toXMin()
+        frontShaftMountBracket = frontShaftMountBracket.union(linkRFront)
+
         // Line up with the end of the motor and the start of the shaft
         frontShaftMountBracket = frontShaftMountBracket.toZMin()
         frontShaftMountBracket = frontShaftMountBracket.movez(motorCSG.maxZ)
@@ -114,21 +122,26 @@ class MyCadGen implements ICadGenerator {
                 rearShaftBracketWidth,
                 rearShaftBracketThickness
         ).toCSG()
+
+        CSG linkRBack = new Cube(limitedR, rearShaftBracketWidth, rearShaftBracketThickness).toCSG().toXMin()
+        rearShaftMountBracket = rearShaftMountBracket.union(linkRBack)
+
         rearShaftMountBracket = rearShaftMountBracket.toZMax()
 
         // Make a space for the passive hinge pin
         CSG passiveHingePin = makePassiveHingePin()
         rearShaftMountBracket = rearShaftMountBracket.difference(passiveHingePin)
-
         // Line up centered with the motor body and at the end of the rear motor bracket
         rearShaftMountBracket = rearShaftMountBracket.movez(motorCSG.minZ)
-        rearShaftMountBracket = rearShaftMountBracket.movex(motorCSG.centerX)
-        rearShaftMountBracket = rearShaftMountBracket.movey(motorCSG.centerY)
         rearShaftMountBracket = rearShaftMountBracket.movez(-rearMotorBracketThickness)
 
-        def bracket = frontShaftMountBracket.union(rearShaftMountBracket)
+        def frontAndRearBrackets = CSG.unionAll([frontShaftMountBracket, rearShaftMountBracket])
+        def bridge = new Cube(bridgeThickness, motorCSG.totalY, frontAndRearBrackets.totalZ).toCSG()
+        bridge = bridge.toZMax().movez(frontAndRearBrackets.maxZ)
+        bridge = bridge.toXMax().movex(frontAndRearBrackets.maxX)
+
+        def bracket = CSG.unionAll([frontAndRearBrackets, bridge])
         bracket = bracket.difference(shaftCollar.movez(motorCSG.maxZ))
-        bracket.setManipulator(link.getListener())
         bracket.setColor(Color.CYAN)
         return bracket
     }
@@ -283,8 +296,6 @@ class MyCadGen implements ICadGenerator {
             vitaminLocations.put(new TransformNR(), [nextMotorType, nextMotorSize])
 
             if (linkIndex != 0) {
-                DHLink prevDh = dhLinks.get(linkIndex - 1)
-
                 def motorBracket = makeMotorBracket(nextMotorCad, dh)
                 CSG shaftCollar
                 if (motorType == "hobbyServo") {
@@ -295,50 +306,55 @@ class MyCadGen implements ICadGenerator {
                     // bracket, so use a shaft collar
                     shaftCollar = Vitamins.get("brushlessBoltOnShaft", "sunnysky_x2204")
                 }
-                def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, prevDh)
+                def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh)
 
-                CSG motorBracketSlice = createMotorBracketSlice(motorBracket)
-
-                CSG shaftBracketSlice = createShaftBracketSlice(shaftBracket, dh)
+//                CSG motorBracketSlice = createMotorBracketSlice(motorBracket)
+//
+//                CSG shaftBracketSlice = createShaftBracketSlice(shaftBracket, dh)
                 shaftBracket = moveDHValues(shaftBracket, dh)
 
-                def connection = motorBracketSlice.hull(shaftBracketSlice)
-                def linkBracket = CSG.unionAll([motorBracket, connection, shaftBracket])
+//                def connection = motorBracketSlice.hull(shaftBracketSlice)
+//                def linkBracket = CSG.unionAll([motorBracket, connection, shaftBracket])
 
-                CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
-                linkBracket = linkBracket.difference(motorKeepawayCylinder)
-
-                linkBracket.setManipulator(dh.getListener())
-                allCad.add(linkBracket)
+//                CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
+//                linkBracket = linkBracket.difference(motorKeepawayCylinder)
+//
+//                linkBracket.setManipulator(dh.getListener())
+//                allCad.add(linkBracket)
+                def linkCSGs = [motorBracket, shaftBracket]
+                linkCSGs.each {
+                    it.setManipulator(dh.getListener())
+                }
+                allCad.addAll(linkCSGs)
             }
         } else if (linkIndex == d.getNumberOfLinks() - 1) {
-            // This is the last link
-            DHLink prevDh = dhLinks.get(linkIndex - 1)
-
-            CSG shaftCollar
-            if (motorType == "hobbyServo") {
-                // The shaft for a servo is the horn, so just difference that
-                shaftCollar = shaftCad
-            } else {
-                // Otherwise we need to bolt something onto the shaft to mesh with the link
-                // bracket, so use a shaft collar
-                shaftCollar = Vitamins.get("brushlessBoltOnShaft", "sunnysky_x2204")
-            }
-            def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh)
-
-            CSG shaftBracketSlice = createShaftBracketSlice(shaftBracket, dh)
-            shaftBracket = moveDHValues(shaftBracket, dh)
-
-            def endEffector = new Cube(10.0).toCSG()
-            def connection = endEffector.hull(shaftBracketSlice)
-
-            def linkBracket = CSG.unionAll([shaftBracket, connection])
-
-            CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
-            linkBracket = linkBracket.difference(motorKeepawayCylinder)
-
-            linkBracket.setManipulator(dh.getListener())
-            allCad.add(linkBracket)
+//            // This is the last link
+//            DHLink prevDh = dhLinks.get(linkIndex - 1)
+//
+//            CSG shaftCollar
+//            if (motorType == "hobbyServo") {
+//                // The shaft for a servo is the horn, so just difference that
+//                shaftCollar = shaftCad
+//            } else {
+//                // Otherwise we need to bolt something onto the shaft to mesh with the link
+//                // bracket, so use a shaft collar
+//                shaftCollar = Vitamins.get("brushlessBoltOnShaft", "sunnysky_x2204")
+//            }
+//            def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh)
+//
+//            CSG shaftBracketSlice = createShaftBracketSlice(shaftBracket, dh)
+//            shaftBracket = moveDHValues(shaftBracket, dh)
+//
+//            def endEffector = new Cube(10.0).toCSG()
+//            def connection = endEffector.hull(shaftBracketSlice)
+//
+//            def linkBracket = CSG.unionAll([shaftBracket, connection])
+//
+//            CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
+//            linkBracket = linkBracket.difference(motorKeepawayCylinder)
+//
+//            linkBracket.setManipulator(dh.getListener())
+//            allCad.add(linkBracket)
         }
 
         double totalMassKg = 0.0
