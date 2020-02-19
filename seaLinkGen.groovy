@@ -19,6 +19,7 @@ class MyCadGen implements ICadGenerator {
     private double rearShaftBracketWidth = rearMotorBracketWidth
     private double rearShaftBracketThickness = rearMotorBracketThickness
     private double bridgeThickness = 5.0
+    private double boltThroughholeRadius = 2.5
 
     static CSG reverseDHValues(CSG incoming, DHLink dh) {
         println "Reversing " + dh
@@ -320,6 +321,8 @@ class MyCadGen implements ICadGenerator {
 
                 CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
                 connection = connection.difference(motorKeepawayCylinder)
+                        .difference(motorBracket.hull())
+                        .difference(shaftBracket.hull())
                 connection.setColor(Color.MEDIUMPURPLE)
 
                 def linkCSGs = [motorBracket, shaftBracket, connection]
