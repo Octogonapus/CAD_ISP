@@ -330,7 +330,7 @@ class MyCadGen implements ICadGenerator {
                 connection.setColor(Color.MEDIUMPURPLE)
 
                 def link = CSG.unionAll([motorBracket, shaftBracket, connection])
-                def (CSG posZHalf, CSG negZHalf) = sliceLinkConnection(dh, link, motorCad, nextMotorCad)
+                def (CSG posZHalf, CSG negZHalf) = sliceLink(dh, link, motorCad, nextMotorCad)
                 def linkCSGs = [posZHalf, negZHalf]
                 linkCSGs.each {
                     it.setManipulator(dh.getListener())
@@ -420,42 +420,35 @@ class MyCadGen implements ICadGenerator {
         return allCad
     }
 
-    private static List sliceLinkConnection(DHLink dh, CSG link, CSG motorCad, CSG nextMotorCad) {
+    private static List sliceLink(DHLink dh, CSG link, CSG motorCad, CSG nextMotorCad) {
         // In this function, "top" means the end of this link, "bottom" means the start of this
         // link, "left" means positive z in the frame of the motor attached to this link, and
         // "right" means negative z in the frame of the motor attached to this link.
-        def topBottomSliceCube = new Cube(170).toCSG()
+        def dhTransform = TransformFactory.nrToCSG(new TransformNR(dh.DhStep(0)).inverse())
+        def topBottomSliceCube = new Cube(10000).toCSG()
                 .toXMin()
-                .transformed(
-                        TransformFactory.nrToCSG(
-                                new TransformNR(dh.DhStep(0))
-                                        .inverse()
-                                        .scale(0.5)
-                        )
-                )
+        // Apply dhTransform but without theta or alpha
+                .movez(-dh.d / 2)
+                .movex(-dh.r / 2)
 
         def topHalf = link.intersect(topBottomSliceCube)
         def bottomHalf = link.difference(topBottomSliceCube)
 
-        def bottomLeftSliceCube = new Cube(170).toCSG()
+        def bottomLeftSliceCube = new Cube(10000).toCSG()
                 .toZMin()
                 .movez(motorCad.minZ / 2)
-                .transformed(
-                        TransformFactory.nrToCSG(new TransformNR(dh.DhStep(0)).inverse())
-                )
+                .transformed(dhTransform)
 
-        def topLeftSliceCube = new Cube(170).toCSG()
+        def topLeftSliceCube = new Cube(10000).toCSG()
                 .toZMin()
                 .movez(nextMotorCad.minZ / 2)
 
-        def bottomRightSliceCube = new Cube(170).toCSG()
+        def bottomRightSliceCube = new Cube(10000).toCSG()
                 .toZMax()
                 .movez(motorCad.minZ / 2)
-                .transformed(
-                        TransformFactory.nrToCSG(new TransformNR(dh.DhStep(0)).inverse())
-                )
+                .transformed(dhTransform)
 
-        def topRightSliceCube = new Cube(170).toCSG()
+        def topRightSliceCube = new Cube(10000).toCSG()
                 .toZMax()
                 .movez(nextMotorCad.minZ / 2)
 
