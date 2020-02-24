@@ -101,16 +101,20 @@ class MyCadGen implements ICadGenerator {
     }
 
     CSG makeShaftBracket(CSG motorCSG, CSG shaftCSG, CSG shaftCollar, DHLink link) {
-        double shaftBracketX = Math.max(shaftCSG.totalX, motorCSG.totalX) + 5.0
-        double shaftBracketY = Math.max(shaftCSG.totalY, motorCSG.totalY) + 5.0
+        double shaftBracketX = Math.max(shaftCollar.totalX, 15.0)
+        double shaftBracketY = Math.max(shaftCollar.totalY, 15.0)
 
         CSG frontShaftMountBracket = new Cube(
                 shaftBracketX,
                 shaftBracketY,
-                5.0
+                10.0
         ).toCSG()
 
-        def limitedR = Math.sqrt(Math.pow(Math.max(motorCSG.maxX, -motorCSG.minX), 2) + Math.pow(Math.max(motorCSG.maxY, -motorCSG.minY), 2)) + bridgeThickness
+        def limitedR = Math.sqrt(
+                Math.pow(Math.max(motorCSG.maxX, -motorCSG.minX), 2) +
+                        Math.pow(Math.max(motorCSG.maxY, -motorCSG.minY), 2)
+        ) + bridgeThickness
+
         CSG linkRFront = new Cube(limitedR, shaftBracketY, 5.0).toCSG().toXMin()
         frontShaftMountBracket = frontShaftMountBracket.union(linkRFront)
 
@@ -325,7 +329,9 @@ class MyCadGen implements ICadGenerator {
                         .difference(shaftBracket.hull())
                 connection.setColor(Color.MEDIUMPURPLE)
 
-                def linkCSGs = [motorBracket, shaftBracket, connection]
+                def link = CSG.unionAll([motorBracket, shaftBracket, connection])
+                def (CSG posZHalf, CSG negZHalf) = sliceLinkConnection(dh, link, motorCad, nextMotorCad)
+                def linkCSGs = [posZHalf, negZHalf]
                 linkCSGs.each {
                     it.setManipulator(dh.getListener())
                 }
@@ -348,7 +354,7 @@ class MyCadGen implements ICadGenerator {
             shaftBracket = moveDHValues(shaftBracket, dh)
             connectionShaftBracketMount = moveDHValues(connectionShaftBracketMount, dh)
 
-            def endEffector = new Cube(10.0).toCSG()
+            def endEffector = new Cube(10.0, 10.0, 80.0).toCSG()
             endEffector.setColor(Color.DARKOLIVEGREEN)
 
             CSG endEffectorSlice = createNegXSlice(endEffector)
@@ -412,6 +418,60 @@ class MyCadGen implements ICadGenerator {
         println("Computed centerOfMassFromCentroid=" + centerOfMassFromCentroid)
 
         return allCad
+    }
+
+    private static List sliceLinkConnection(DHLink dh, CSG link, CSG motorCad, CSG nextMotorCad) {
+        // In this function, "top" means the end of this link, "bottom" means the start of this
+        // link, "left" means positive z in the frame of the motor attached to this link, and
+        // "right" means negative z in the frame of the motor attached to this link.
+        def topBottomSliceCube = new Cube(170).toCSG()
+                .toXMin()
+                .transformed(
+                        TransformFactory.nrToCSG(
+                                new TransformNR(dh.DhStep(0))
+                                        .inverse()
+                                        .scale(0.5)
+                        )
+                )
+
+        def topHalf = link.intersect(topBottomSliceCube)
+        def bottomHalf = link.difference(topBottomSliceCube)
+
+        def bottomLeftSliceCube = new Cube(170).toCSG()
+                .toZMin()
+                .movez(motorCad.minZ / 2)
+                .transformed(
+                        TransformFactory.nrToCSG(new TransformNR(dh.DhStep(0)).inverse())
+                )
+
+        def topLeftSliceCube = new Cube(170).toCSG()
+                .toZMin()
+                .movez(nextMotorCad.minZ / 2)
+
+        def bottomRightSliceCube = new Cube(170).toCSG()
+                .toZMax()
+                .movez(motorCad.minZ / 2)
+                .transformed(
+                        TransformFactory.nrToCSG(new TransformNR(dh.DhStep(0)).inverse())
+                )
+
+        def topRightSliceCube = new Cube(170).toCSG()
+                .toZMax()
+                .movez(nextMotorCad.minZ / 2)
+
+        def leftHalf = CSG.unionAll([
+                topLeftSliceCube.intersect(topHalf),
+                bottomLeftSliceCube.intersect(bottomHalf)
+        ])
+        def rightHalf = CSG.unionAll([
+                topRightSliceCube.intersect(topHalf),
+                bottomRightSliceCube.intersect(bottomHalf)
+        ])
+
+        leftHalf.setColor(Color.CYAN)
+        rightHalf.setColor(Color.MEDIUMPURPLE)
+
+        return [leftHalf, rightHalf]
     }
 
     private static CSG createPosXSlice(CSG shaftBracket, DHLink dh) {
