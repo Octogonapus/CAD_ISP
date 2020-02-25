@@ -169,7 +169,10 @@ class MyCadGen implements ICadGenerator {
         bridge = bridge.toXMax().movex(frontAndRearBrackets.maxX)
 
         def bracket = CSG.unionAll([frontAndRearBrackets, bridge])
-        bracket = bracket.difference(shaftCollar.movez(motorCSG.maxZ))
+        bracket = bracket.difference([
+                shaftCollar.movez(motorCSG.maxZ),
+                shaftCSG.movez(motorCSG.maxZ)
+        ])
         bracket.setColor(Color.CYAN)
         return bracket
     }
