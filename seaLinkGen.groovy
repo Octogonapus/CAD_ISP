@@ -123,6 +123,17 @@ class MyCadGen implements ICadGenerator {
 
         CSG linkRFront = new Cube(limitedR, shaftBracketY, 5.0).toCSG().toXMin()
         frontShaftMountBracket = frontShaftMountBracket.union(linkRFront)
+//        def g = TransformFactory.nrToCSG(new TransformNR(frontShaftMountBracket.maxX, 0, 0, new RotationNR(0, 0, 90)))
+//        frontShaftMountBracket = frontShaftMountBracket.union(linkRFront,
+//                Fillet.outerFillet(
+//                        Slice.slice(
+//                                frontShaftMountBracket,
+//                                g,
+//                                0
+//                        ),
+//                        5
+//                ).transformed(g)
+//        )
 
         // Line up with the end of the motor and the start of the shaft
         frontShaftMountBracket = frontShaftMountBracket.toZMin()
@@ -380,7 +391,9 @@ class MyCadGen implements ICadGenerator {
             connectionShaftBracketMount.setColor(Color.MEDIUMPURPLE)
             connectionEndEffectorMount.setColor(Color.MEDIUMPURPLE)
 
-            def linkCSGs = [endEffector, shaftBracket, connection]
+            def link = CSG.unionAll([endEffector, shaftBracket, connection])
+            def (CSG posZHalf, CSG negZHalf) = sliceLink(dh, link, motorCad, endEffector)
+            def linkCSGs = [posZHalf, negZHalf]
             linkCSGs.each {
                 it.setManipulator(dh.getListener())
             }
