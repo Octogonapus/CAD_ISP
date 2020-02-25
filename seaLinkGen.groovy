@@ -20,6 +20,8 @@ class MyCadGen implements ICadGenerator {
     private double rearShaftBracketThickness = rearMotorBracketThickness
     private double bridgeThickness = 5.0
     private double boltThroughholeRadius = 2.5
+    private CSG heatedInsert = Vitamins.get("heatedThreadedInsert", "M5")
+    private CSG shoulderBoltKeepaway = Vitamins.get("capScrew", "M5")
 
     static CSG reverseDHValues(CSG incoming, DHLink dh) {
         println "Reversing " + dh
@@ -34,22 +36,15 @@ class MyCadGen implements ICadGenerator {
         return incoming.transformed(move)
     }
 
-    CSG makePassiveHingePin() {
-        // Half height because we just want to "overwrite" the corner radius on the bottom half
-        CSG bottomHalf = new Cylinder(passiveHingePinRadius, passiveHingePinHeight / 2)
-                .toCSG()
-                .toZMax()
-
-        CSG topHalf = new RoundedCylinder(passiveHingePinRadius, passiveHingePinHeight)
-                .cornerRadius(1.0)
-                .toCSG()
-                .toZMax()
-
-        CSG passiveHingePin = CSG.unionAll([bottomHalf, topHalf])
-        return passiveHingePin
-    }
-
-    CSG makeMotorBracket(CSG motorCSG, DHLink link) {
+    /**
+     * @param motorCSG The motor that is going to be mounted to the bracket (which is the motor on
+     * the end of the link, not the motor powering the link).
+     * @param link This link.
+     * @param heatedInsert Used to make a space to insert a heated insert to form one half of the
+     * passive hinge.
+     * @return The motor bracket.
+     */
+    CSG makeMotorBracket(CSG motorCSG, DHLink link, CSG heatedInsert) {
         // Motor bracket thickness is from z=0 to maxZ. Bolt heads will be flush with the top
         //  of the bracket.
         CSG frontMotorMountBracket = new Cube(
@@ -91,16 +86,27 @@ class MyCadGen implements ICadGenerator {
         bridge = bridge.toXMin().movex(frontAndRearBrackets.minX)
         bridge = bridge.movey(motorCSG.centerY)
 
-        CSG passiveHingePin = makePassiveHingePin()
-        // Line up with the back of the rear bracket
-        passiveHingePin = passiveHingePin.movez(rearMotorMountBracket.minZ)
-
-        def bracket = CSG.unionAll([frontAndRearBrackets, bridge, passiveHingePin])
+        def bracket = CSG.unionAll([frontAndRearBrackets, bridge])
+        // Make space for the heated insert for the hinge
+                .difference(heatedInsert.movez(rearMotorMountBracket.minZ))
         bracket.setColor(Color.BURLYWOOD)
         return bracket
     }
 
-    CSG makeShaftBracket(CSG motorCSG, CSG shaftCSG, CSG shaftCollar, DHLink link) {
+    /**
+     * @param motorCSG The motor that is powering this link (not the motor bolted in to this link,
+     * which is the next motor).
+     * @param shaftCSG The shaft attached to the motor.
+     * @param shaftCollar The shaft collar that will go on the shaft to connect this shaft bracket
+     * to the shaft.
+     * @param link This link.
+     * @param shoulderBolt Used to create a space for the shoulder part of a shoulder bolt
+     * to pass through to form half of the passive hinge. The threaded end of the shoulder bolt
+     * screws in to a heated insert on the motor bracket for the motor bolted in to this link (i.e.,
+     * the next motor).
+     * @return The shaft bracket.
+     */
+    CSG makeShaftBracket(CSG motorCSG, CSG shaftCSG, CSG shaftCollar, DHLink link, CSG shoulderBolt) {
         double shaftBracketX = Math.max(shaftCollar.totalX, 15.0)
         double shaftBracketY = Math.max(shaftCollar.totalY, 15.0)
 
@@ -133,9 +139,15 @@ class MyCadGen implements ICadGenerator {
 
         rearShaftMountBracket = rearShaftMountBracket.toZMax()
 
-        // Make a space for the passive hinge pin
-        CSG passiveHingePin = makePassiveHingePin()
-        rearShaftMountBracket = rearShaftMountBracket.difference(passiveHingePin)
+        // Make a space for the shoulder bolt for the hinge
+        rearShaftMountBracket = rearShaftMountBracket.difference(
+                shoulderBolt
+                // Flip it upside down because it attaches to the rear bracket
+                        .rotx(180)
+                // Move the origin of the bolt to the outer edge of the bracket so the head is fully outside the bracket
+                        .movez(-rearShaftBracketThickness)
+        )
+
         // Line up centered with the motor body and at the end of the rear motor bracket
         rearShaftMountBracket = rearShaftMountBracket.movez(motorCSG.minZ)
         rearShaftMountBracket = rearShaftMountBracket.movez(-rearMotorBracketThickness)
@@ -301,7 +313,7 @@ class MyCadGen implements ICadGenerator {
             vitaminLocations.put(new TransformNR(), [nextMotorType, nextMotorSize])
 
             if (linkIndex != 0) {
-                def motorBracket = makeMotorBracket(nextMotorCad, dh)
+                def motorBracket = makeMotorBracket(nextMotorCad, dh, heatedInsert)
                 CSG shaftCollar
                 if (motorType == "hobbyServo") {
                     // The shaft for a servo is the horn, so just difference that
@@ -311,7 +323,7 @@ class MyCadGen implements ICadGenerator {
                     // bracket, so use a shaft collar
                     shaftCollar = Vitamins.get("brushlessBoltOnShaft", "sunnysky_x2204")
                 }
-                def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh)
+                def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh, shoulderBoltKeepaway)
 
                 CSG motorBracketSlice = createNegXSlice(motorBracket)
                 CSG connectionMotorBracketMount = createNegXConnectionMount(motorBracketSlice)
@@ -347,7 +359,7 @@ class MyCadGen implements ICadGenerator {
                 // bracket, so use a shaft collar
                 shaftCollar = Vitamins.get("brushlessBoltOnShaft", "sunnysky_x2204")
             }
-            def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh)
+            def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh, shoulderBoltKeepaway)
 
             CSG shaftBracketSlice = createPosXSlice(shaftBracket, dh)
             CSG connectionShaftBracketMount = createPosXConnectionMount(shaftBracketSlice)
