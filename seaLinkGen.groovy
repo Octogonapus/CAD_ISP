@@ -14,14 +14,17 @@ class MyCadGen implements ICadGenerator {
     private double grid = 25.0
     private double rearMotorBracketWidth = 15.0
     private double rearMotorBracketThickness = 5.0
-    private double passiveHingePinRadius = 2.5
-    private double passiveHingePinHeight = 5.0
     private double rearShaftBracketWidth = rearMotorBracketWidth
     private double rearShaftBracketThickness = rearMotorBracketThickness
-    private double bridgeThickness = 5.0
-    private double boltThroughholeRadius = 2.5
-    private CSG heatedInsert = Vitamins.get("heatedThreadedInsert", "M5")
-    private CSG shoulderBoltKeepaway = Vitamins.get("capScrew", "M5")
+    private CSG passiveHingeHeatedInsert = Vitamins.get("heatedThreadedInsert", "M5")
+    private CSG passiveHingeShoulderBoltKeepaway = Vitamins.get("capScrew", "M5")
+    private double linkClamshellBoltKeepawayRadius = 2.5
+    private double linkClamshellBoltInset = 2
+    private double bridgeThickness = linkClamshellBoltKeepawayRadius * 2 + linkClamshellBoltInset * 2
+
+    MyCadGen() {
+        CSG.setUseStackTraces(false)
+    }
 
     static CSG reverseDHValues(CSG incoming, DHLink dh) {
         println "Reversing " + dh
@@ -44,7 +47,7 @@ class MyCadGen implements ICadGenerator {
      * passive hinge.
      * @return The motor bracket.
      */
-    CSG makeMotorBracket(CSG motorCSG, DHLink link, CSG heatedInsert) {
+    def makeMotorBracket(CSG motorCSG, DHLink link, CSG heatedInsert) {
         // Motor bracket thickness is from z=0 to maxZ. Bolt heads will be flush with the top
         //  of the bracket.
         CSG frontMotorMountBracket = new Cube(
@@ -53,7 +56,7 @@ class MyCadGen implements ICadGenerator {
                 motorCSG.maxZ
         ).toCSG()
 
-        def linkRLength = -motorCSG.minX + bridgeThickness
+        def linkRLength = -motorCSG.minX + this.bridgeThickness
         CSG linkRFront = new Cube(linkRLength, motorCSG.totalY, motorCSG.maxZ).toCSG().toXMax()
         frontMotorMountBracket = frontMotorMountBracket.union(linkRFront)
 
@@ -83,14 +86,18 @@ class MyCadGen implements ICadGenerator {
         def frontAndRearBrackets = CSG.unionAll([frontMotorMountBracket, rearMotorMountBracket])
         def bridge = new Cube(bridgeThickness, motorCSG.totalY, frontAndRearBrackets.totalZ).toCSG()
         bridge = bridge.toZMax().movez(frontAndRearBrackets.maxZ)
-        bridge = bridge.toXMin().movex(frontAndRearBrackets.minX)
+        bridge = bridge.toXMax().movex(frontAndRearBrackets.minX)
         bridge = bridge.movey(motorCSG.centerY)
 
         def bracket = CSG.unionAll([frontAndRearBrackets, bridge])
         // Make space for the heated insert for the hinge
                 .difference(heatedInsert.movez(rearMotorMountBracket.minZ))
+
+        def linkClamshellBoltKeepaway = createLinkClamshellBoltKeepaway(bridge, bracket)
+        bracket = bracket.difference(linkClamshellBoltKeepaway)
+
         bracket.setColor(Color.BURLYWOOD)
-        return bracket
+        return [bracket, linkClamshellBoltKeepaway]
     }
 
     /**
@@ -106,7 +113,7 @@ class MyCadGen implements ICadGenerator {
      * the next motor).
      * @return The shaft bracket.
      */
-    CSG makeShaftBracket(CSG motorCSG, CSG shaftCSG, CSG shaftCollar, DHLink link, CSG shoulderBolt) {
+    def makeShaftBracket(CSG motorCSG, CSG shaftCSG, CSG shaftCollar, DHLink link, CSG shoulderBolt) {
         double shaftBracketX = Math.max(shaftCollar.totalX, 15.0)
         double shaftBracketY = Math.max(shaftCollar.totalY, 15.0)
 
@@ -173,8 +180,12 @@ class MyCadGen implements ICadGenerator {
                 shaftCollar.movez(motorCSG.maxZ),
                 shaftCSG.movez(motorCSG.maxZ)
         ])
+
+        def linkClamshellBoltKeepaway = createLinkClamshellBoltKeepaway(bridge, bracket)
+        bracket = bracket.difference(linkClamshellBoltKeepaway)
+
         bracket.setColor(Color.CYAN)
-        return bracket
+        return [bracket, linkClamshellBoltKeepaway]
     }
 
     @Override
@@ -327,7 +338,8 @@ class MyCadGen implements ICadGenerator {
             vitaminLocations.put(new TransformNR(), [nextMotorType, nextMotorSize])
 
             if (linkIndex != 0) {
-                def motorBracket = makeMotorBracket(nextMotorCad, dh, heatedInsert)
+                def (CSG motorBracket, CSG motorBracketLinkClamshellBoltKeepaway) = makeMotorBracket(nextMotorCad, dh, passiveHingeHeatedInsert)
+
                 CSG shaftCollar
                 if (motorType == "hobbyServo") {
                     // The shaft for a servo is the horn, so just difference that
@@ -337,7 +349,7 @@ class MyCadGen implements ICadGenerator {
                     // bracket, so use a shaft collar
                     shaftCollar = Vitamins.get("brushlessBoltOnShaft", "sunnysky_x2204")
                 }
-                def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh, shoulderBoltKeepaway)
+                def (CSG shaftBracket, CSG shaftBracketLinkClamshellBoltKeepaway) = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh, passiveHingeShoulderBoltKeepaway)
 
                 CSG motorBracketSlice = createNegXSlice(motorBracket)
                 CSG connectionMotorBracketMount = createNegXConnectionMount(motorBracketSlice)
@@ -350,10 +362,13 @@ class MyCadGen implements ICadGenerator {
                 def connection = connectionMotorBracketMount.hull(connectionShaftBracketMount)
 
                 CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
-                connection = connection.difference(motorKeepawayCylinder)
-                        .difference(motorBracket.hull())
-                        .difference(shaftBracket.hull())
-                connection.setColor(Color.MEDIUMPURPLE)
+                connection = connection.difference([
+                        motorKeepawayCylinder,
+                        motorBracket.hull(),
+                        shaftBracket.hull(),
+                        motorBracketLinkClamshellBoltKeepaway,
+                        moveDHValues(shaftBracketLinkClamshellBoltKeepaway, dh)
+                ])
 
                 def link = CSG.unionAll([motorBracket, shaftBracket, connection])
                 def (CSG posZHalf, CSG negZHalf) = sliceLink(dh, link, motorCad, nextMotorCad)
@@ -373,7 +388,7 @@ class MyCadGen implements ICadGenerator {
                 // bracket, so use a shaft collar
                 shaftCollar = Vitamins.get("brushlessBoltOnShaft", "sunnysky_x2204")
             }
-            def shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh, shoulderBoltKeepaway)
+            def (CSG shaftBracket, CSG shaftBracketLinkClamshellBoltKeepaway) = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh, passiveHingeShoulderBoltKeepaway)
 
             CSG shaftBracketSlice = createPosXSlice(shaftBracket, dh)
             CSG connectionShaftBracketMount = createPosXConnectionMount(shaftBracketSlice)
@@ -389,10 +404,10 @@ class MyCadGen implements ICadGenerator {
             def connection = connectionShaftBracketMount.hull(connectionEndEffectorMount)
 
             CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
-            connection = connection.difference(motorKeepawayCylinder)
-            connection.setColor(Color.MEDIUMPURPLE)
-            connectionShaftBracketMount.setColor(Color.MEDIUMPURPLE)
-            connectionEndEffectorMount.setColor(Color.MEDIUMPURPLE)
+            connection = connection.difference([
+                    motorKeepawayCylinder,
+                    moveDHValues(shaftBracketLinkClamshellBoltKeepaway, dh)
+            ])
 
             def link = CSG.unionAll([endEffector, shaftBracket, connection])
             def (CSG posZHalf, CSG negZHalf) = sliceLink(dh, link, motorCad, endEffector)
@@ -448,7 +463,7 @@ class MyCadGen implements ICadGenerator {
         return allCad
     }
 
-    private static List sliceLink(DHLink dh, CSG link, CSG motorCad, CSG nextMotorCad) {
+    private List sliceLink(DHLink dh, CSG link, CSG motorCad, CSG nextMotorCad) {
         // In this function, "top" means the end of this link, "bottom" means the start of this
         // link, "left" means positive z in the frame of the motor attached to this link, and
         // "right" means negative z in the frame of the motor attached to this link.
@@ -527,8 +542,13 @@ class MyCadGen implements ICadGenerator {
         motorBracketSlice
     }
 
-    private static CSG createPosXConnectionMount(CSG posXSlice) {
-        CSG connectionShaftBracketMount = new Cube(5.0, posXSlice.totalY, posXSlice.totalZ).toCSG()
+    private CSG createPosXConnectionMount(CSG posXSlice) {
+        CSG connectionShaftBracketMount = new Cube(
+                1.0,
+                posXSlice.totalY,
+                posXSlice.totalZ
+        ).toCSG()
+
         connectionShaftBracketMount = connectionShaftBracketMount
                 .toXMin()
                 .movex(posXSlice.maxX)
@@ -537,8 +557,13 @@ class MyCadGen implements ICadGenerator {
         return connectionShaftBracketMount
     }
 
-    private static CSG createNegXConnectionMount(CSG negXSlice) {
-        CSG connectionEndEffectorMount = new Cube(5.0, negXSlice.totalY, negXSlice.totalZ).toCSG()
+    private CSG createNegXConnectionMount(CSG negXSlice) {
+        CSG connectionEndEffectorMount = new Cube(
+                1.0,
+                negXSlice.totalY,
+                negXSlice.totalZ
+        ).toCSG()
+
         connectionEndEffectorMount = connectionEndEffectorMount
                 .toXMax()
                 .movex(negXSlice.minX)
@@ -566,6 +591,16 @@ class MyCadGen implements ICadGenerator {
         )
         motorKeepawayCylinder = moveDHValues(motorKeepawayCylinder, dh)
         motorKeepawayCylinder
+    }
+
+    private CSG createLinkClamshellBoltKeepaway(CSG bridge, CSG bracket) {
+        def linkClamshellBoltKeepaway = new Cylinder(linkClamshellBoltKeepawayRadius, 10000).toCSG()
+                .toZMax().movez(bracket.maxZ)
+                .movex(bridge.minX + linkClamshellBoltKeepawayRadius + linkClamshellBoltInset)
+        return CSG.unionAll([
+                linkClamshellBoltKeepaway.toYMax().movey(bracket.maxY - linkClamshellBoltInset),
+                linkClamshellBoltKeepaway.toYMin().movey(bracket.minY + linkClamshellBoltInset)
+        ])
     }
 }
 
