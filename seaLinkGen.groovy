@@ -364,8 +364,9 @@ class MyCadGen implements ICadGenerator {
                 CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
                 connection = connection.difference([
                         motorKeepawayCylinder,
-                        motorBracket.hull(),
+                        motorBracket.scalez(2).hull(),
                         shaftBracket.hull(),
+//                        moveDHValues(reverseDHValues(shaftBracket.scalex(2).hull(), dh), dh),
                         motorBracketLinkClamshellBoltKeepaway,
                         moveDHValues(shaftBracketLinkClamshellBoltKeepaway, dh)
                 ])
@@ -406,7 +407,8 @@ class MyCadGen implements ICadGenerator {
             CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
             connection = connection.difference([
                     motorKeepawayCylinder,
-                    moveDHValues(shaftBracketLinkClamshellBoltKeepaway, dh)
+                    moveDHValues(shaftBracketLinkClamshellBoltKeepaway, dh),
+                    moveDHValues(reverseDHValues(shaftBracket.scalez(2).hull(), dh), dh)
             ])
 
             def link = CSG.unionAll([endEffector, shaftBracket, connection])
