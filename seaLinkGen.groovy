@@ -366,7 +366,7 @@ class MyCadGen implements ICadGenerator {
                         motorKeepawayCylinder,
                         motorBracket.scalez(2).hull(),
                         shaftBracket.hull(),
-//                        moveDHValues(reverseDHValues(shaftBracket.scalex(2).hull(), dh), dh),
+                        moveDHValues(reverseDHValues(shaftBracket.scalez(2).hull(), dh), dh), // TODO: This needs to be scalex for alpha=90
                         motorBracketLinkClamshellBoltKeepaway,
                         moveDHValues(shaftBracketLinkClamshellBoltKeepaway, dh)
                 ])
