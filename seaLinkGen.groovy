@@ -1,6 +1,7 @@
 import com.neuronrobotics.bowlerstudio.BowlerStudio
 import com.neuronrobotics.bowlerstudio.creature.ICadGenerator
 import com.neuronrobotics.bowlerstudio.physics.TransformFactory
+import com.neuronrobotics.bowlerstudio.scripting.ScriptingEngine
 import com.neuronrobotics.bowlerstudio.vitamins.Vitamins
 import com.neuronrobotics.sdk.addons.kinematics.*
 import com.neuronrobotics.sdk.addons.kinematics.math.RotationNR
@@ -188,111 +189,114 @@ class MyCadGen implements ICadGenerator {
         return [bracket, linkClamshellBoltKeepaway]
     }
 
+    private static CSG getEncompassingCylinder(CSG csg) {
+        double diam = Math.sqrt(Math.pow(csg.totalX, 2) + Math.pow(csg.totalY, 2))
+        CSG out = new Cylinder(diam / 2, csg.totalZ).toCSG()
+        out = out.move(csg.center)
+        out = out.movez(-(out.maxZ - csg.maxZ))
+        return out
+    }
+
     @Override
     ArrayList<CSG> generateBody(MobileBase mobileBase) {
-        def vitaminLocations = new HashMap<TransformNR, List<String>>()
-        def allCad = new ArrayList<CSG>()
-        double baseGrid = grid * 2
-        double baseBoltThickness = 15
-        double baseCoreheight = 1
-        String boltsize = "M5x25"
-        def thrustBearingSize = "Thrust_1andAHalfinch"
+        Map<TransformNR, List<String>> vitaminLocations = new HashMap<TransformNR, List<String>>()
+        List<CSG> allCad = new ArrayList<CSG>()
+
         for (DHParameterKinematics d : mobileBase.getAllDHChains()) {
-            // Hardware to engineering units configuration
             LinkConfiguration conf = d.getLinkConfiguration(0)
-            // loading the vitamins referenced in the configuration
-            TransformNR locationOfMotorMount = d.getRobotToFiducialTransform()
-            TransformNR locationOfMotorMountCopy = locationOfMotorMount.copy()
-            if (locationOfMotorMount.getZ() > baseCoreheight)
-                baseCoreheight = locationOfMotorMount.getZ()
-            vitaminLocations.put(locationOfMotorMountCopy, [
-                    "ballBearing",
-                    thrustBearingSize
-            ])
-            vitaminLocations.put(locationOfMotorMount, [
-                    conf.getElectroMechanicalType(),
-                    conf.getElectroMechanicalSize()
-            ])
+            CSG motor = Vitamins.get("hobbyServo", "standardMicro")
+            // Vitamins.get("hobbyServo", "standardMicro") Vitamins.get("stepperMotor", "GenericNEMA14") Vitamins.get("roundMotor", "WPI-gb37y3530-50en")
+            CSG motorShaft = Vitamins.get("hobbyServoHorn", "standardMicro1")
+            // Vitamins.get("hobbyServoHorn", "standardMicro1") Vitamins.get("dShaft", "5mm") Vitamins.get("dShaft", "WPI-gb37y3530-50en")
+            double pitch = 3.0
+            double thickness = 10.0
+            double gearDiameter = 30.0
+            double gearTeeth = (gearDiameter * Math.PI) / pitch
+//            List<Object> gearGenResult = ScriptingEngine.gitScriptRun(
+//                    "https://github.com/madhephaestus/GearGenerator.git",
+//                    "bevelGear.groovy",
+//                    [gearTeeth, gearTeeth, thickness, pitch] as ArrayList<Object>
+//            ) as List<Object>
+//            CSG gearL = gearGenResult[0] as CSG
+//            CSG gearR = gearGenResult[1] as CSG
+//            double gearSeparationDistance = gearGenResult[2] as double
+            CSG gearL = new Cylinder(gearDiameter, thickness).toCSG()
+            CSG gearR = new Cylinder(gearDiameter, thickness).toCSG()
+            double gearSeparationDistance = -(gearR.maxY - gearL.minY) + 1
+
+            CSG base = new Cube(
+                    gearL.totalX,
+                    gearL.totalY + gearR.totalY,
+                    motor.totalZ
+            ).toCSG()
+            base = base.movey(-base.maxY / 2)
+
+            // Put the thrust bearing in
+            CSG thrustBearing = Vitamins.get("ballBearing", "Thrust_1andAHalfinch")
+            thrustBearing = thrustBearing.toZMin().movez(base.maxZ - thrustBearing.totalZ + 0.5)
+            base = base.difference(thrustBearing.hull())
+
+            // Cut a path for the bolt to be inserted
+            double baseBoltKeepawayRadius = 5
+            CSG boltKeepaway = new Cylinder(baseBoltKeepawayRadius, 10000).toCSG()
+            boltKeepaway = boltKeepaway.toZMax().movez(thrustBearing.minZ - 5)
+            base = base.difference(boltKeepaway)
+
+            // Cut a path for the bolt threads
+            CSG bolt = Vitamins.get("capScrew", "M5x25")
+            bolt = bolt.rotx(180).movez(boltKeepaway.maxZ)
+            base = base.difference(bolt)
+
+            // Add gears
+            gearL = gearL.toZMin().movez(thrustBearing.maxZ)
+            double meshDistance = 1.0
+            gearR = gearR.toZMin().movez(thrustBearing.maxZ).movey(gearSeparationDistance)
+
+            // Cut a pat h for the bolt threads through gearL
+            gearL = gearL.difference(bolt)
+
+            // Add a bearing flush with the gear for the nut to sit on
+            CSG nutBearing = Vitamins.get("ballBearing", "695zz")
+            nutBearing = nutBearing.toZMin().movez(gearL.maxZ - nutBearing.totalZ)
+            gearL = gearL.difference(nutBearing.hull())
+
+            // Add a nut for the bolt
+            CSG nut = Vitamins.get("lockNut", "M5")
+            nut = nut.movez(gearL.maxZ)
+
+            // Add the motor
+            motor = motor.toZMax().movey(gearR.centerY).movez(base.maxZ)
+            base = base.difference(motor)
+
+            // Add the motor's shaft
+            motorShaft = motorShaft.movey(gearR.centerY).movez(base.maxZ)
+            gearR = gearR.difference(motorShaft)
+            CSG shaftKeepaway = getEncompassingCylinder(motorShaft)
+            shaftKeepaway = shaftKeepaway.movez(-(shaftKeepaway.maxZ - motor.maxZ))
+            base = base.difference(shaftKeepaway)
+
+            // Add the link
+            CSG link = new Cylinder(gearDiameter - 5, 30).toCSG()
+            link = link.toZMin().movez(gearL.maxZ)
+            // Keepaway for the nut and bolt, plus a channel in from the side for a wrench
+            CSG nutAndBoltKeepaway = getEncompassingCylinder(bolt.union(nut))
+            // Scale up to fit a wrench
+            nutAndBoltKeepaway = nutAndBoltKeepaway.scalez(1.05).scalex(1.5).scaley(1.5)
+            // Move to the edge of the link and hull to create a channel for the wrench to pass through
+            nutAndBoltKeepaway = nutAndBoltKeepaway.union(nutAndBoltKeepaway.movex(link.minX)).hull()
+            link = link.difference(nutAndBoltKeepaway)
+
+            CSG assembly = CSG.unionAll([base, thrustBearing, bolt, nut, gearL.union(link), gearR, nutBearing, motor, motorShaft])
+            assembly = assembly.toZMin()
+
+            // Move it the root of the limb
+            assembly = assembly.transformed(TransformFactory.nrToCSG(d.getRobotToFiducialTransform()))
+
+            allCad.add(assembly)
         }
-        def insert = ["heatedThreadedInsert", "M5"]
-        def insertMeasurements = Vitamins.getConfiguration(insert[0], insert[1])
-        def mountLocations = [new TransformNR(baseGrid, baseGrid, 0, new RotationNR(180, 0, 0)),
-                              new TransformNR(baseGrid, -baseGrid, 0, new RotationNR(180, 0, 0)),
-                              new TransformNR(-baseGrid, baseGrid, 0, new RotationNR(180, 0, 0)),
-                              new TransformNR(-baseGrid, -baseGrid, 0, new RotationNR(180, 0, 0))]
-        mountLocations.each {
-            vitaminLocations.put(it, ["capScrew", boltsize])
-            vitaminLocations.put(it.copy().translateZ(insertMeasurements.installLength as double), insert)
-        }
 
-        double totalMass = 0
-        TransformNR centerOfMassFromCentroid = new TransformNR()
-        for (TransformNR tr : vitaminLocations.keySet()) {
-            def vitaminType = vitaminLocations.get(tr)[0]
-            def vitaminSize = vitaminLocations.get(tr)[1]
-
-            HashMap<String, Object> measurements = Vitamins.getConfiguration(vitaminType, vitaminSize)
-
-            CSG vitaminCad = Vitamins.get(vitaminType, vitaminSize)
-            Transform move = TransformFactory.nrToCSG(tr)
-            CSG part = vitaminCad.transformed(move)
-            part.setManipulator(mobileBase.getRootListener())
-            allCad.add(part)
-
-            double massCentroidYValue = measurements.massCentroidY as double
-            double massCentroidXValue = measurements.massCentroidX as double
-            double massCentroidZValue = measurements.massCentroidZ as double
-            double massKgValue = measurements.massKg as double
-            println "Base Vitamin " + vitaminType + " " + vitaminSize
-            try {
-                TransformNR COMCentroid = tr.times(new TransformNR(
-                        massCentroidXValue, massCentroidYValue, massCentroidZValue, new RotationNR()
-                ))
-                totalMass += massKgValue
-            } catch (Exception ex) {
-                BowlerStudio.printStackTrace(ex)
-            }
-
-            //do com calculation here for centerOfMassFromCentroid and totalMass
-        }
-        //Do additional CAD and add to the running CoM
-        def thrustMeasurements = Vitamins.getConfiguration("ballBearing",
-                thrustBearingSize)
-        CSG baseCore = new Cylinder(
-                thrustMeasurements.outerDiameter / 2 + 5,
-                baseCoreheight + thrustMeasurements.width / 2
-        ).toCSG()
-        CSG baseCoreshort = new Cylinder(
-                thrustMeasurements.outerDiameter / 2 + 5,
-                baseCoreheight * 3.0 / 4.0
-        ).toCSG()
-        CSG mountLug = new Cylinder(15, baseBoltThickness).toCSG().toZMax()
-        CSG mountCap = Parabola.coneByHeight(15, 20)
-                .rotx(-90)
-                .toZMax()
-                .movez(-baseBoltThickness)
-        def coreParts = [baseCore]
-        mountLocations.each {
-            def place = TransformFactory.nrToCSG(it)
-            coreParts.add(CSG.hullAll(mountLug.transformed(place), baseCoreshort))
-            coreParts.add(mountCap.transformed(place))
-        }
-
-        // assemble the base
-        CSG wire = new Cube(17, 200, 5).toCSG()
-                .toZMin()
-                .toYMin()
-        CSG vitamin_roundMotor_WPI_gb37y3530_50en = Vitamins.get("roundMotor", "WPI-gb37y3530-50en")
-                .toZMin()
-                .union(wire)
-        allCad.add(vitamin_roundMotor_WPI_gb37y3530_50en)
-
-        def baseCad = CSG.unionAll(coreParts).difference(vitamin_roundMotor_WPI_gb37y3530_50en)
-        baseCad.setManipulator(mobileBase.getRootListener())
-        allCad.add(baseCad)
-
-        mobileBase.setMassKg(totalMass)
-        mobileBase.setCenterOfMassFromCentroid(centerOfMassFromCentroid)
+//        mobileBase.setMassKg(totalMass)
+//        mobileBase.setCenterOfMassFromCentroid(centerOfMassFromCentroid)
 
         return allCad
     }

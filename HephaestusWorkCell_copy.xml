@@ -106,9 +106,9 @@
 	</vitamins>
 	<passive>false</passive>
 	<mass>0.20400000000000001</mass>
-	<centerOfMassFromCentroid>	<x>-0.14137673362027742</x>
-	<y>0.022615706227006812</y>
-	<z>-49.800578117758555</z>
+	<centerOfMassFromCentroid>	<x>-0.696437111429938</x>
+	<y>0.11140741983747197</y>
+	<z>-0.2747606013412503</z>
 	<rotw>1.0</rotw>
 	<rotx>-0.0</rotx>
 	<roty>-0.0</roty>
@@ -197,7 +197,7 @@
 <baseToZframe>
 	<x>0.0</x>
 	<y>0.0</y>
-	<z>65.0</z>
+	<z>0.0</z>
 	<rotw>1.0</rotw>
 	<rotx>-2.7755575615628907E-17</rotx>
 	<roty>-2.775557561562889E-17</roty>
@@ -301,8 +301,8 @@
 	</vitamins>
 	<passive>false</passive>
 	<mass>0.121</mass>
-	<centerOfMassFromCentroid>	<x>-0.768595041322314</x>
-	<y>1.235995094379564E-16</y>
+	<centerOfMassFromCentroid>	<x>-0.09223140495867768</x>
+	<y>1.4831941132554765E-17</y>
 	<z>0.0</z>
 	<rotw>1.0</rotw>
 	<rotx>-0.0</rotx>
