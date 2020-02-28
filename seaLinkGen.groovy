@@ -48,7 +48,7 @@ class MyCadGen implements ICadGenerator {
      * passive hinge.
      * @return The motor bracket.
      */
-    def makeMotorBracket(CSG motorCSG, DHLink link, CSG heatedInsert) {
+    def makeMotorBracket(CSG motorCSG, CSG heatedInsert) {
         // Motor bracket thickness is from z=0 to maxZ. Bolt heads will be flush with the top
         //  of the bracket.
         CSG frontMotorMountBracket = new Cube(
@@ -57,7 +57,7 @@ class MyCadGen implements ICadGenerator {
                 motorCSG.maxZ
         ).toCSG()
 
-        def linkRLength = -motorCSG.minX + this.bridgeThickness
+        def linkRLength = -motorCSG.minX + bridgeThickness
         CSG linkRFront = new Cube(linkRLength, motorCSG.totalY, motorCSG.maxZ).toCSG().toXMax()
         frontMotorMountBracket = frontMotorMountBracket.union(linkRFront)
 
@@ -114,7 +114,7 @@ class MyCadGen implements ICadGenerator {
      * the next motor).
      * @return The shaft bracket.
      */
-    def makeShaftBracket(CSG motorCSG, CSG shaftCSG, CSG shaftCollar, DHLink link, CSG shoulderBolt) {
+    def makeShaftBracket(CSG motorCSG, CSG shaftCSG, CSG shaftCollar, CSG shoulderBolt) {
         double shaftBracketX = Math.max(shaftCollar.totalX, 15.0)
         double shaftBracketY = Math.max(shaftCollar.totalY, 15.0)
 
@@ -204,6 +204,9 @@ class MyCadGen implements ICadGenerator {
 
         for (DHParameterKinematics d : mobileBase.getAllDHChains()) {
             LinkConfiguration conf = d.getLinkConfiguration(0)
+            LinkConfiguration nextConf = d.getLinkConfiguration(1)
+            DHLink dh = d.getChain().getLinks()[0]
+            DHLink nextDh = d.getChain().getLinks()[1]
             CSG motor = Vitamins.get("hobbyServo", "standardMicro")
             // Vitamins.get("hobbyServo", "standardMicro") Vitamins.get("stepperMotor", "GenericNEMA14") Vitamins.get("roundMotor", "WPI-gb37y3530-50en")
             CSG motorShaft = Vitamins.get("hobbyServoHorn", "standardMicro1")
@@ -249,10 +252,9 @@ class MyCadGen implements ICadGenerator {
 
             // Add gears
             gearL = gearL.toZMin().movez(thrustBearing.maxZ)
-            double meshDistance = 1.0
             gearR = gearR.toZMin().movez(thrustBearing.maxZ).movey(gearSeparationDistance)
 
-            // Cut a pat h for the bolt threads through gearL
+            // Cut a path for the bolt threads through gearL
             gearL = gearL.difference(bolt)
 
             // Add a bearing flush with the gear for the nut to sit on
@@ -275,6 +277,17 @@ class MyCadGen implements ICadGenerator {
             shaftKeepaway = shaftKeepaway.movez(-(shaftKeepaway.maxZ - motor.maxZ))
             base = base.difference(shaftKeepaway)
 
+            // Add the motor bracket
+            def nextMotorType = nextConf.getElectroMechanicalType()
+            def nextMotorSize = nextConf.getElectroMechanicalSize()
+            def nextMotorCad = Vitamins.get(nextMotorType, nextMotorSize)
+            def (CSG motorBracket, CSG motorBracketLinkClamshellBoltKeepaway) = makeMotorBracket(nextMotorCad, passiveHingeHeatedInsert)
+//            motorBracket.setManipulator(dh.getListener())
+            CSG motorBracketSlice = createNegXSlice(motorBracket)
+            CSG connectionMotorBracketMount = createNegXConnectionMount(motorBracketSlice)
+            connectionMotorBracketMount = reverseDHValues(connectionMotorBracketMount, dh)
+            dh.getListener()
+
             // Add the link
             CSG link = new Cylinder(gearDiameter - 5, 30).toCSG()
             link = link.toZMin().movez(gearL.maxZ)
@@ -286,7 +299,9 @@ class MyCadGen implements ICadGenerator {
             nutAndBoltKeepaway = nutAndBoltKeepaway.union(nutAndBoltKeepaway.movex(link.minX)).hull()
             link = link.difference(nutAndBoltKeepaway)
 
-            CSG assembly = CSG.unionAll([base, thrustBearing, bolt, nut, gearL.union(link), gearR, nutBearing, motor, motorShaft])
+            CSG connection = link.hull(connectionMotorBracketMount)
+
+            CSG assembly = CSG.unionAll([base, thrustBearing, bolt, nut, gearL.union(connection), gearR, nutBearing, motor, motorShaft])
             assembly = assembly.toZMin()
 
             // Move it the root of the limb
@@ -342,7 +357,7 @@ class MyCadGen implements ICadGenerator {
             vitaminLocations.put(new TransformNR(), [nextMotorType, nextMotorSize])
 
             if (linkIndex != 0) {
-                def (CSG motorBracket, CSG motorBracketLinkClamshellBoltKeepaway) = makeMotorBracket(nextMotorCad, dh, passiveHingeHeatedInsert)
+                def (CSG motorBracket, CSG motorBracketLinkClamshellBoltKeepaway) = makeMotorBracket(nextMotorCad, passiveHingeHeatedInsert)
 
                 CSG shaftCollar
                 if (motorType == "hobbyServo") {
@@ -353,7 +368,7 @@ class MyCadGen implements ICadGenerator {
                     // bracket, so use a shaft collar
                     shaftCollar = Vitamins.get("brushlessBoltOnShaft", "sunnysky_x2204")
                 }
-                def (CSG shaftBracket, CSG shaftBracketLinkClamshellBoltKeepaway) = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh, passiveHingeShoulderBoltKeepaway)
+                def (CSG shaftBracket, CSG shaftBracketLinkClamshellBoltKeepaway) = makeShaftBracket(motorCad, shaftCad, shaftCollar, passiveHingeShoulderBoltKeepaway)
 
                 CSG motorBracketSlice = createNegXSlice(motorBracket)
                 CSG connectionMotorBracketMount = createNegXConnectionMount(motorBracketSlice)
@@ -393,7 +408,7 @@ class MyCadGen implements ICadGenerator {
                 // bracket, so use a shaft collar
                 shaftCollar = Vitamins.get("brushlessBoltOnShaft", "sunnysky_x2204")
             }
-            def (CSG shaftBracket, CSG shaftBracketLinkClamshellBoltKeepaway) = makeShaftBracket(motorCad, shaftCad, shaftCollar, dh, passiveHingeShoulderBoltKeepaway)
+            def (CSG shaftBracket, CSG shaftBracketLinkClamshellBoltKeepaway) = makeShaftBracket(motorCad, shaftCad, shaftCollar, passiveHingeShoulderBoltKeepaway)
 
             CSG shaftBracketSlice = createPosXSlice(shaftBracket, dh)
             CSG connectionShaftBracketMount = createPosXConnectionMount(shaftBracketSlice)
