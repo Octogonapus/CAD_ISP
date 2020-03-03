@@ -214,19 +214,22 @@ class MyCadGen implements ICadGenerator {
             double thrustBearingExposedHeight = 0.5
             double pitch = 3.0
             double thickness = 10.0
-            double gearDiameter = 30.0
+            double gearDiameter = 60.0
+            // circum = #teeth * pitch
+            // PI*d = #teeth * pitch
+            // (PI*d)/pitch = #teeth
             double gearTeeth = (gearDiameter * Math.PI) / pitch
-//            List<Object> gearGenResult = ScriptingEngine.gitScriptRun(
-//                    "https://github.com/madhephaestus/GearGenerator.git",
-//                    "bevelGear.groovy",
-//                    [gearTeeth, gearTeeth, thickness, pitch] as ArrayList<Object>
-//            ) as List<Object>
-//            CSG gearL = gearGenResult[0] as CSG
-//            CSG gearR = gearGenResult[1] as CSG
-//            double gearSeparationDistance = gearGenResult[2] as double
-            CSG gearL = new Cylinder(gearDiameter, thickness).toCSG()
-            CSG gearR = new Cylinder(gearDiameter, thickness).toCSG()
-            double gearSeparationDistance = -(gearR.maxY - gearL.minY) + 1
+            List<Object> gearGenResult = ScriptingEngine.gitScriptRun(
+                    "https://github.com/madhephaestus/GearGenerator.git",
+                    "bevelGear.groovy",
+                    [gearTeeth, gearTeeth, thickness, pitch, 0, 0] as ArrayList<Object>
+            ) as List<Object>
+            CSG gearL = gearGenResult[0] as CSG
+            CSG gearR = gearGenResult[1] as CSG
+            double gearSeparationDistance = gearGenResult[2] as double
+//            CSG gearL = new Cylinder(gearDiameter/2, thickness).toCSG()
+//            CSG gearR = new Cylinder(gearDiameter/2, thickness).toCSG()
+//            double gearSeparationDistance = -(gearR.maxY - gearL.minY) + 1
 
             CSG base = new Cube(
                     gearL.totalX,
@@ -253,7 +256,7 @@ class MyCadGen implements ICadGenerator {
 
             // Add gears
             gearL = gearL.toZMin().movez(thrustBearing.maxZ)
-            gearR = gearR.toZMin().movez(thrustBearing.maxZ).movey(gearSeparationDistance)
+            gearR = gearR.rotz(-90).toZMin().movez(thrustBearing.maxZ)//.movey(gearSeparationDistance)
 
             // Cut a path for the bolt threads through gearL
             gearL = gearL.difference(bolt)
@@ -288,7 +291,7 @@ class MyCadGen implements ICadGenerator {
             CSG connectionMotorBracketMount = createNegXConnectionMount(motorBracketSlice)
 
             // Add the link
-            CSG link = new Cylinder(gearDiameter - 5, 30).toCSG()
+            CSG link = new Cylinder(gearDiameter/2 - 5, 30).toCSG()
             link = link.toZMin().movez(gearL.maxZ)
             // Keepaway for the nut and bolt, plus a channel in from the side for a wrench
             CSG nutAndBoltKeepaway = getEncompassingCylinder(bolt.union(nut))
@@ -299,7 +302,7 @@ class MyCadGen implements ICadGenerator {
             link = link.difference(nutAndBoltKeepaway)
 
             CSG linkWithGear = gearL.union(link)
-            CSG connection = moveDHValues(new Cylinder(gearDiameter - 5, 10).toCSG().toZMin().movez(linkWithGear.maxZ), dh).hull(connectionMotorBracketMount)
+            CSG connection = moveDHValues(new Cylinder(gearDiameter/2 - 5, 10).toCSG().toZMin().movez(linkWithGear.maxZ), dh).hull(connectionMotorBracketMount)
             CSG connectionWithLinkWithGear = moveDHValues(linkWithGear.toZMin().movez(base.totalZ + thrustBearingExposedHeight), dh).union(connection)
             CSG finalFirstLink = CSG.unionAll([connectionWithLinkWithGear, motorBracket])
             finalFirstLink.setManipulator(d.getChain().getLinks()[0].getListener())
