@@ -256,7 +256,8 @@ class MyCadGen implements ICadGenerator {
 
             // Add gears
             gearL = gearL.toZMin().movez(thrustBearing.maxZ)
-            gearR = gearR.rotz(-90).toZMin().movez(thrustBearing.maxZ)//.movey(gearSeparationDistance)
+            gearR = gearR.rotz(-90).toZMin().movez(thrustBearing.maxZ)
+//.movey(gearSeparationDistance)
 
             // Cut a path for the bolt threads through gearL
             gearL = gearL.difference(bolt)
@@ -291,7 +292,7 @@ class MyCadGen implements ICadGenerator {
             CSG connectionMotorBracketMount = createNegXConnectionMount(motorBracketSlice)
 
             // Add the link
-            CSG link = new Cylinder(gearDiameter/2 - 5, 30).toCSG()
+            CSG link = new Cylinder(gearDiameter / 2 - 5, 30).toCSG()
             link = link.toZMin().movez(gearL.maxZ)
             // Keepaway for the nut and bolt, plus a channel in from the side for a wrench
             CSG nutAndBoltKeepaway = getEncompassingCylinder(bolt.union(nut))
@@ -302,7 +303,7 @@ class MyCadGen implements ICadGenerator {
             link = link.difference(nutAndBoltKeepaway)
 
             CSG linkWithGear = gearL.union(link)
-            CSG connection = moveDHValues(new Cylinder(gearDiameter/2 - 5, 10).toCSG().toZMin().movez(linkWithGear.maxZ), dh).hull(connectionMotorBracketMount)
+            CSG connection = moveDHValues(new Cylinder(gearDiameter / 2 - 5, 10).toCSG().toZMin().movez(linkWithGear.maxZ), dh).hull(connectionMotorBracketMount)
             CSG connectionWithLinkWithGear = moveDHValues(linkWithGear.toZMin().movez(base.totalZ + thrustBearingExposedHeight), dh).union(connection)
             CSG finalFirstLink = CSG.unionAll([connectionWithLinkWithGear, motorBracket])
             finalFirstLink.setManipulator(d.getChain().getLinks()[0].getListener())
