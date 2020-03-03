@@ -51,10 +51,10 @@
 
 	</vitamins>
 	<passive>false</passive>
-	<mass>0.0955</mass>
-	<centerOfMassFromCentroid>	<x>-0.031375303281828616</x>
-	<y>0.12189806164606898</y>
-	<z>-0.05464600145249602</z>
+	<mass>0.0945</mass>
+	<centerOfMassFromCentroid>	<x>0.0</x>
+	<y>0.0</y>
+	<z>0.0</z>
 	<rotw>1.0</rotw>
 	<rotx>-0.0</rotx>
 	<roty>-0.0</roty>
@@ -246,8 +246,8 @@
 
 	</vitamins>
 	<passive>false</passive>
-	<mass>0.121</mass>
-	<centerOfMassFromCentroid>	<x>-0.49586776859504134</x>
+	<mass>0.12</mass>
+	<centerOfMassFromCentroid>	<x>0.0</x>
 	<y>0.0</y>
 	<z>0.0</z>
 	<rotw>1.0</rotw>
@@ -263,7 +263,7 @@
 	<rotz>-0.0</rotz></imuFromCentroid>
 
 	<DHParameters>
-		<Delta>0.0</Delta>
+		<Delta>100.0</Delta>
 		<Theta>0.0</Theta>
 		<Radius>60.0</Radius>
 		<Alpha>-90.0</Alpha>
@@ -441,10 +441,10 @@
 
 	</vitamins>
 	<passive>false</passive>
-	<mass>0.20400000000000001</mass>
-	<centerOfMassFromCentroid>	<x>-0.2941176470588235</x>
+	<mass>0.203</mass>
+	<centerOfMassFromCentroid>	<x>0.0</x>
 	<y>0.0</y>
-	<z>-0.04975490196078432</z>
+	<z>-50.0</z>
 	<rotw>1.0</rotw>
 	<rotx>-0.0</rotx>
 	<roty>-0.0</roty>
@@ -458,7 +458,7 @@
 	<rotz>-0.0</rotz></imuFromCentroid>
 
 	<DHParameters>
-		<Delta>0.0</Delta>
+		<Delta>100.0</Delta>
 		<Theta>0.0</Theta>
 		<Radius>60.0</Radius>
 		<Alpha>-90.0</Alpha>
@@ -496,9 +496,9 @@
 	</vitamins>
 	<passive>false</passive>
 	<mass>0.20400000000000001</mass>
-	<centerOfMassFromCentroid>	<x>-0.45588235294117646</x>
-	<y>7.331147373525844E-17</y>
-	<z>-0.04975490196078432</z>
+	<centerOfMassFromCentroid>	<x>-0.09254411764705882</x>
+	<y>1.4882229168257463E-17</y>
+	<z>-49.75490196078431</z>
 	<rotw>1.0</rotw>
 	<rotx>-0.0</rotx>
 	<roty>-0.0</roty>

@@ -207,10 +207,11 @@ class MyCadGen implements ICadGenerator {
             LinkConfiguration nextConf = d.getLinkConfiguration(1)
             DHLink dh = d.getChain().getLinks()[0]
             DHLink nextDh = d.getChain().getLinks()[1]
-            CSG motor = Vitamins.get("hobbyServo", "standardMicro")
+            CSG motor = Vitamins.get("stepperMotor", "GenericNEMA14")
             // Vitamins.get("hobbyServo", "standardMicro") Vitamins.get("stepperMotor", "GenericNEMA14") Vitamins.get("roundMotor", "WPI-gb37y3530-50en")
-            CSG motorShaft = Vitamins.get("hobbyServoHorn", "standardMicro1")
+            CSG motorShaft = Vitamins.get("dShaft", "5mm")
             // Vitamins.get("hobbyServoHorn", "standardMicro1") Vitamins.get("dShaft", "5mm") Vitamins.get("dShaft", "WPI-gb37y3530-50en")
+            double thrustBearingExposedHeight = 0.5
             double pitch = 3.0
             double thickness = 10.0
             double gearDiameter = 30.0
@@ -236,7 +237,7 @@ class MyCadGen implements ICadGenerator {
 
             // Put the thrust bearing in
             CSG thrustBearing = Vitamins.get("ballBearing", "Thrust_1andAHalfinch")
-            thrustBearing = thrustBearing.toZMin().movez(base.maxZ - thrustBearing.totalZ + 0.5)
+            thrustBearing = thrustBearing.toZMin().movez(base.maxZ - thrustBearing.totalZ + thrustBearingExposedHeight)
             base = base.difference(thrustBearing.hull())
 
             // Cut a path for the bolt to be inserted
@@ -268,7 +269,8 @@ class MyCadGen implements ICadGenerator {
 
             // Add the motor
             motor = motor.toZMax().movey(gearR.centerY).movez(base.maxZ)
-            base = base.difference(motor)
+            CSG motorInsertionPath = motor.toZMax().union(motor.movez(-10000)).hull()
+            base = base.difference(motor).difference(motorInsertionPath)
 
             // Add the motor's shaft
             motorShaft = motorShaft.movey(gearR.centerY).movez(base.maxZ)
@@ -282,10 +284,8 @@ class MyCadGen implements ICadGenerator {
             def nextMotorSize = nextConf.getElectroMechanicalSize()
             def nextMotorCad = Vitamins.get(nextMotorType, nextMotorSize)
             def (CSG motorBracket, CSG motorBracketLinkClamshellBoltKeepaway) = makeMotorBracket(nextMotorCad, passiveHingeHeatedInsert)
-//            motorBracket.setManipulator(dh.getListener())
             CSG motorBracketSlice = createNegXSlice(motorBracket)
             CSG connectionMotorBracketMount = createNegXConnectionMount(motorBracketSlice)
-//            connectionMotorBracketMount = reverseDHValues(connectionMotorBracketMount, dh)
 
             // Add the link
             CSG link = new Cylinder(gearDiameter - 5, 30).toCSG()
@@ -300,20 +300,24 @@ class MyCadGen implements ICadGenerator {
 
             CSG linkWithGear = gearL.union(link)
             CSG connection = moveDHValues(new Cylinder(gearDiameter - 5, 10).toCSG().toZMin().movez(linkWithGear.maxZ), dh).hull(connectionMotorBracketMount)
-            CSG connectionWithLinkWithGear = moveDHValues(linkWithGear.toZMin().movez(base.totalZ), dh).union(connection)
-//            connectionWithLinkWithGear = connectionWithLinkWithGear.difference(nutAndBoltKeepaway)
-//            connectionWithLinkWithGear = moveDHValues(connectionWithLinkWithGear, dh)
+            CSG connectionWithLinkWithGear = moveDHValues(linkWithGear.toZMin().movez(base.totalZ + thrustBearingExposedHeight), dh).union(connection)
             CSG finalFirstLink = CSG.unionAll([connectionWithLinkWithGear, motorBracket])
             finalFirstLink.setManipulator(d.getChain().getLinks()[0].getListener())
             allCad.add(finalFirstLink)
 
-            CSG assembly = CSG.unionAll([base, thrustBearing, bolt, nut, gearR, nutBearing, motor, motorShaft])
+//            CSG assembly = CSG.unionAll([base, thrustBearing, bolt, nut, gearR, nutBearing, motor, motorShaft])
+            CSG assembly = base
             assembly = assembly.toZMin()
 
-            // Move it the root of the limb
-            assembly = assembly.transformed(TransformFactory.nrToCSG(d.getRobotToFiducialTransform()))
+            def out = [assembly, gearR.movez(assembly.maxZ - gearR.minZ)]
+            for (int i = 0; i < out.size(); i++) {
+                out[i] = out[i].transformed(TransformFactory.nrToCSG(d.getRobotToFiducialTransform()))
+            }
 
-            allCad.add(assembly)
+            // Move it the root of the limb
+//            assembly = assembly.transformed(TransformFactory.nrToCSG(d.getRobotToFiducialTransform()))
+
+            allCad.addAll(out)
         }
 
 //        mobileBase.setMassKg(totalMass)
@@ -342,10 +346,12 @@ class MyCadGen implements ICadGenerator {
         def shaftType = conf.getShaftType()
         def shaftSize = conf.getShaftSize()
         def shaftCad = Vitamins.get(shaftType, shaftSize)
-        vitaminLocations.put(
-                locationOfMotorMount,
-                [shaftType, shaftSize]
-        )
+        if (linkIndex != 0) {
+            vitaminLocations.put(
+                    locationOfMotorMount,
+                    [shaftType, shaftSize]
+            )
+        }
 
         def motorType = conf.getElectroMechanicalType()
         def motorSize = conf.getElectroMechanicalSize()
