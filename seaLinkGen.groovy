@@ -286,7 +286,9 @@ class MyCadGen implements ICadGenerator {
             CSG motorBracketSlice = createNegXSlice(motorBracket)
             CSG connectionMotorBracketMount = createNegXConnectionMount(motorBracketSlice)
             connectionMotorBracketMount = reverseDHValues(connectionMotorBracketMount, dh)
-            dh.getListener()
+            motorBracket.setManipulator(d.getChain().getLinks()[0].getListener())
+            allCad.add(motorBracket)
+            println("maxZ in generate body (" + nextMotorType + "): " + nextMotorCad.maxZ)
 
             // Add the link
             CSG link = new Cylinder(gearDiameter - 5, 30).toCSG()
@@ -299,9 +301,9 @@ class MyCadGen implements ICadGenerator {
             nutAndBoltKeepaway = nutAndBoltKeepaway.union(nutAndBoltKeepaway.movex(link.minX)).hull()
             link = link.difference(nutAndBoltKeepaway)
 
-            CSG connection = link.hull(connectionMotorBracketMount)
+//            CSG connection = link.hull(connectionMotorBracketMount)
 
-            CSG assembly = CSG.unionAll([base, thrustBearing, bolt, nut, gearL.union(connection), gearR, nutBearing, motor, motorShaft])
+            CSG assembly = CSG.unionAll([base, thrustBearing, bolt, nut, gearL.union(link), gearR, nutBearing, motor, motorShaft])
             assembly = assembly.toZMin()
 
             // Move it the root of the limb
@@ -355,6 +357,7 @@ class MyCadGen implements ICadGenerator {
             def nextMotorSize = nextConf.getElectroMechanicalSize()
             def nextMotorCad = Vitamins.get(nextMotorType, nextMotorSize)
             vitaminLocations.put(new TransformNR(), [nextMotorType, nextMotorSize])
+            println("maxZ in generate cad (" + motorType + ": " + motorCad.maxZ)
 
             if (linkIndex != 0) {
                 def (CSG motorBracket, CSG motorBracketLinkClamshellBoltKeepaway) = makeMotorBracket(nextMotorCad, passiveHingeHeatedInsert)
