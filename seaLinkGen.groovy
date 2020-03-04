@@ -382,7 +382,7 @@ class MyCadGen implements ICadGenerator {
                 } else {
                     // Otherwise we need to bolt something onto the shaft to mesh with the link
                     // bracket, so use a shaft collar
-                    shaftCollar = Vitamins.get("brushlessBoltOnShaft", "sunnysky_x2204")
+                    shaftCollar = Vitamins.get("brushlessBoltOnShaft", "5mmShaftWithCollar")
                 }
                 def (CSG shaftBracket, CSG shaftBracketLinkClamshellBoltKeepaway) = makeShaftBracket(motorCad, shaftCad, shaftCollar, passiveHingeShoulderBoltKeepaway)
 
