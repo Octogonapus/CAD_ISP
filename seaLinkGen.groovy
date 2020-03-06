@@ -14,9 +14,10 @@ class MyCadGen implements ICadGenerator {
 
     private double grid = 25.0
     private double rearMotorBracketWidth = 15.0
-    private double rearMotorBracketThickness = 5.0
+    private double rearMotorBracketThickness = 10.0
     private double rearShaftBracketWidth = rearMotorBracketWidth
-    private double rearShaftBracketThickness = rearMotorBracketThickness
+    private double frontShaftBracketThickness = 10.0
+    private double rearShaftBracketThickness = frontShaftBracketThickness
     private CSG passiveHingeHeatedInsert = Vitamins.get("heatedThreadedInsert", "M5")
     private CSG passiveHingeShoulderBoltKeepaway = Vitamins.get("capScrew", "M5")
     private double linkClamshellBoltKeepawayRadius = 2.5
@@ -82,7 +83,7 @@ class MyCadGen implements ICadGenerator {
 
         // Line up with back face
         rearMotorMountBracket = rearMotorMountBracket.toZMax()
-        rearMotorMountBracket = rearMotorMountBracket.movez(motorCSG.minZ)
+        rearMotorMountBracket = rearMotorMountBracket.movez(-motorCSG.totalZ)
 
         def frontAndRearBrackets = CSG.unionAll([frontMotorMountBracket, rearMotorMountBracket])
         def bridge = new Cube(bridgeThickness, motorCSG.totalY, frontAndRearBrackets.totalZ).toCSG()
@@ -94,11 +95,8 @@ class MyCadGen implements ICadGenerator {
         // Make space for the heated insert for the hinge
                 .difference(heatedInsert.movez(rearMotorMountBracket.minZ))
 
-        def linkClamshellBoltKeepaway = createLinkClamshellBoltKeepaway(bridge, bracket)
-        bracket = bracket.difference(linkClamshellBoltKeepaway)
-
         bracket.setColor(Color.BURLYWOOD)
-        return [bracket, linkClamshellBoltKeepaway]
+        return bracket
     }
 
     /**
@@ -121,7 +119,7 @@ class MyCadGen implements ICadGenerator {
         CSG frontShaftMountBracket = new Cube(
                 shaftBracketX,
                 shaftBracketY,
-                10.0
+                frontShaftBracketThickness
         ).toCSG()
 
         def limitedR = Math.sqrt(
@@ -129,19 +127,8 @@ class MyCadGen implements ICadGenerator {
                         Math.pow(Math.max(motorCSG.maxY, -motorCSG.minY), 2)
         ) + bridgeThickness
 
-        CSG linkRFront = new Cube(limitedR, shaftBracketY, 5.0).toCSG().toXMin()
+        CSG linkRFront = new Cube(limitedR, shaftBracketY, frontShaftBracketThickness).toCSG().toXMin()
         frontShaftMountBracket = frontShaftMountBracket.union(linkRFront)
-//        def g = TransformFactory.nrToCSG(new TransformNR(frontShaftMountBracket.maxX, 0, 0, new RotationNR(0, 0, 90)))
-//        frontShaftMountBracket = frontShaftMountBracket.union(linkRFront,
-//                Fillet.outerFillet(
-//                        Slice.slice(
-//                                frontShaftMountBracket,
-//                                g,
-//                                0
-//                        ),
-//                        5
-//                ).transformed(g)
-//        )
 
         // Line up with the end of the motor and the start of the shaft
         frontShaftMountBracket = frontShaftMountBracket.toZMin()
@@ -168,7 +155,7 @@ class MyCadGen implements ICadGenerator {
         )
 
         // Line up centered with the motor body and at the end of the rear motor bracket
-        rearShaftMountBracket = rearShaftMountBracket.movez(motorCSG.minZ)
+        rearShaftMountBracket = rearShaftMountBracket.movez(-motorCSG.totalZ)
         rearShaftMountBracket = rearShaftMountBracket.movez(-rearMotorBracketThickness)
 
         def frontAndRearBrackets = CSG.unionAll([frontShaftMountBracket, rearShaftMountBracket])
@@ -182,11 +169,8 @@ class MyCadGen implements ICadGenerator {
                 shaftCSG.movez(motorCSG.maxZ)
         ])
 
-        def linkClamshellBoltKeepaway = createLinkClamshellBoltKeepaway(bridge, bracket)
-        bracket = bracket.difference(linkClamshellBoltKeepaway)
-
         bracket.setColor(Color.CYAN)
-        return [bracket, linkClamshellBoltKeepaway]
+        return bracket
     }
 
     private static CSG getEncompassingCylinder(CSG csg) {
@@ -287,7 +271,7 @@ class MyCadGen implements ICadGenerator {
             def nextMotorType = nextConf.getElectroMechanicalType()
             def nextMotorSize = nextConf.getElectroMechanicalSize()
             def nextMotorCad = Vitamins.get(nextMotorType, nextMotorSize)
-            def (CSG motorBracket, CSG motorBracketLinkClamshellBoltKeepaway) = makeMotorBracket(nextMotorCad, passiveHingeHeatedInsert)
+            CSG motorBracket = makeMotorBracket(nextMotorCad, passiveHingeHeatedInsert)
             CSG motorBracketSlice = createNegXSlice(motorBracket)
             CSG connectionMotorBracketMount = createNegXConnectionMount(motorBracketSlice)
 
@@ -373,7 +357,7 @@ class MyCadGen implements ICadGenerator {
             vitaminLocations.put(new TransformNR(), [nextMotorType, nextMotorSize])
 
             if (linkIndex != 0) {
-                def (CSG motorBracket, CSG motorBracketLinkClamshellBoltKeepaway) = makeMotorBracket(nextMotorCad, passiveHingeHeatedInsert)
+                CSG motorBracket = makeMotorBracket(nextMotorCad, passiveHingeHeatedInsert)
 
                 CSG shaftCollar
                 if (motorType == "hobbyServo") {
@@ -384,7 +368,7 @@ class MyCadGen implements ICadGenerator {
                     // bracket, so use a shaft collar
                     shaftCollar = Vitamins.get("brushlessBoltOnShaft", "5mmShaftWithCollar")
                 }
-                def (CSG shaftBracket, CSG shaftBracketLinkClamshellBoltKeepaway) = makeShaftBracket(motorCad, shaftCad, shaftCollar, passiveHingeShoulderBoltKeepaway)
+                CSG shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, passiveHingeShoulderBoltKeepaway)
 
                 CSG motorBracketSlice = createNegXSlice(motorBracket)
                 CSG connectionMotorBracketMount = createNegXConnectionMount(motorBracketSlice)
@@ -402,13 +386,11 @@ class MyCadGen implements ICadGenerator {
                         motorBracket.scalez(2).hull(),
                         shaftBracket.hull(),
                         moveDHValues(reverseDHValues(shaftBracket.scalez(2).hull(), dh), dh), // TODO: This needs to be scalex for alpha=90
-                        motorBracketLinkClamshellBoltKeepaway,
-                        moveDHValues(shaftBracketLinkClamshellBoltKeepaway, dh)
                 ])
 
                 def link = CSG.unionAll([motorBracket, shaftBracket, connection])
-                def (CSG posZHalf, CSG negZHalf) = sliceLink(dh, link, motorCad, nextMotorCad)
-                def linkCSGs = [posZHalf, negZHalf]
+//                def (CSG posZHalf, CSG negZHalf) = sliceLink(dh, link, motorCad, nextMotorCad)
+                def linkCSGs = [link] // [posZHalf, negZHalf]
                 linkCSGs.each {
                     it.setManipulator(dh.getListener())
                 }
@@ -424,7 +406,7 @@ class MyCadGen implements ICadGenerator {
                 // bracket, so use a shaft collar
                 shaftCollar = Vitamins.get("brushlessBoltOnShaft", "sunnysky_x2204")
             }
-            def (CSG shaftBracket, CSG shaftBracketLinkClamshellBoltKeepaway) = makeShaftBracket(motorCad, shaftCad, shaftCollar, passiveHingeShoulderBoltKeepaway)
+            CSG shaftBracket = makeShaftBracket(motorCad, shaftCad, shaftCollar, passiveHingeShoulderBoltKeepaway)
 
             CSG shaftBracketSlice = createPosXSlice(shaftBracket, dh)
             CSG connectionShaftBracketMount = createPosXConnectionMount(shaftBracketSlice)
@@ -442,13 +424,12 @@ class MyCadGen implements ICadGenerator {
             CSG motorKeepawayCylinder = createMotorKeepawayCylinder(motorCad, dh)
             connection = connection.difference([
                     motorKeepawayCylinder,
-                    moveDHValues(shaftBracketLinkClamshellBoltKeepaway, dh),
                     moveDHValues(reverseDHValues(shaftBracket.scalez(2).hull(), dh), dh)
             ])
 
             def link = CSG.unionAll([endEffector, shaftBracket, connection])
-            def (CSG posZHalf, CSG negZHalf) = sliceLink(dh, link, motorCad, endEffector)
-            def linkCSGs = [posZHalf, negZHalf]
+//            def (CSG posZHalf, CSG negZHalf) = sliceLink(dh, link, motorCad, endEffector)
+            def linkCSGs = [link] // [posZHalf, negZHalf]
             linkCSGs.each {
                 it.setManipulator(dh.getListener())
             }
