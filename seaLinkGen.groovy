@@ -181,6 +181,15 @@ class MyCadGen implements ICadGenerator {
         return out
     }
 
+    private static double roundToMultiple(double toRound, double multipleOf) {
+        double rounded = Math.round(toRound / multipleOf) * multipleOf
+        if (rounded < toRound) {
+            return Math.ceil(toRound / multipleOf) * multipleOf
+        } else {
+            return rounded
+        }
+    }
+
     @Override
     ArrayList<CSG> generateBody(MobileBase mobileBase) {
         Map<TransformNR, List<String>> vitaminLocations = new HashMap<TransformNR, List<String>>()
@@ -211,15 +220,36 @@ class MyCadGen implements ICadGenerator {
             CSG gearL = gearGenResult[0] as CSG
             CSG gearR = gearGenResult[1] as CSG
             double gearSeparationDistance = gearGenResult[2] as double
-//            CSG gearL = new Cylinder(gearDiameter/2, thickness).toCSG()
-//            CSG gearR = new Cylinder(gearDiameter/2, thickness).toCSG()
-//            double gearSeparationDistance = -(gearR.maxY - gearL.minY) + 1
 
             CSG base = new Cube(
-                    gearL.totalX,
-                    gearL.totalY + gearR.totalY,
+                    grid * 3 + 10,
+                    grid * 5 + 10,
                     motor.totalZ
             ).toCSG()
+
+            CSG baseBolt = Vitamins.get("capScrew", "M5x25")
+                    .rotx(180).movex(grid * 1).movey(grid * 2)
+            CSG baseThreadedInsert = Vitamins.get("heatedThreadedInsert", "M5")
+                    .movex(grid * 1).movey(grid * 2)
+
+            CSG baseBolts = CSG.unionAll([
+                    baseBolt.movex(0).movey(0),
+                    baseBolt.movex(0).movey(-grid * 4),
+                    baseBolt.movex(-grid * 2).movey(0),
+                    baseBolt.movex(-grid * 2).movey(-grid * 4)
+            ])
+            baseBolts = baseBolts.movez(base.minZ)
+
+            CSG baseThreadedInserts = CSG.unionAll([
+                    baseThreadedInsert.movex(0).movey(0),
+                    baseThreadedInsert.movex(0).movey(-grid * 4),
+                    baseThreadedInsert.movex(-grid * 2).movey(0),
+                    baseThreadedInsert.movex(-grid * 2).movey(-grid * 4)
+            ])
+            baseThreadedInserts = baseThreadedInserts.toZMin().movez(base.minZ)
+
+            base = base.difference(baseThreadedInserts).difference(baseBolts)
+
             base = base.movey(-base.maxY / 2)
 
             // Put the thrust bearing in
@@ -241,7 +271,6 @@ class MyCadGen implements ICadGenerator {
             // Add gears
             gearL = gearL.toZMin().movez(thrustBearing.maxZ)
             gearR = gearR.rotz(-90).toZMin().movez(thrustBearing.maxZ)
-//.movey(gearSeparationDistance)
 
             // Cut a path for the bolt threads through gearL
             gearL = gearL.difference(bolt)
