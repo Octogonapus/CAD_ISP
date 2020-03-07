@@ -94,6 +94,7 @@ class MyCadGen implements ICadGenerator {
         def bracket = CSG.unionAll([frontAndRearBrackets, bridge])
         // Make space for the heated insert for the hinge
                 .difference(heatedInsert.movez(rearMotorMountBracket.minZ))
+                .difference(passiveHingeShoulderBoltKeepaway.rotx(180).movez(rearMotorMountBracket.minZ))
 
         bracket.setColor(Color.BURLYWOOD)
         return bracket
